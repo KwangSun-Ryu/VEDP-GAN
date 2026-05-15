@@ -1,0 +1,6 @@
+# 모델에 전달할 hyper-parameters
+model_params:
+  allow_writing_files: false # catboost_info 폴더 생성 안 함
+  loss_function: Logloss
+  verbose: 0
+  thread_count: 1

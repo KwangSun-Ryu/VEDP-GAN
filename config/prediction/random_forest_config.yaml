@@ -1,0 +1,4 @@
+# 모델에 전달할 hyper-parameters
+model_params:
+  max_features: sqrt
+  n_jobs: 1

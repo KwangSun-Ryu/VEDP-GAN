@@ -1,0 +1,1 @@
+"""TADGAN GitHub package."""

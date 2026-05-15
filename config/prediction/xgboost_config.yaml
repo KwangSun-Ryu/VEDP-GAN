@@ -1,0 +1,5 @@
+# 모델에 전달할 hyper-parameters
+model_params:
+  objective: binary:logistic
+  eval_metric: logloss
+  n_jobs: 1

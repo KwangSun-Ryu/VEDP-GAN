@@ -1,0 +1,111 @@
+## Stage 3 regularizer 제거 ablation용 residual TADGAN 설정
+## - latent alignment와 mode seeking을 모두 끄므로 stage 3 objective는 stage 2와 동일함
+[runtime]
+batch_size = 256
+num_workers = 2
+bin_threshold = 0.5
+## synthetic CSV를 만들 때 target 분포를 어떻게 맞출지 결정
+## - "prior": 원본 데이터 전체 target 분포를 따라 생성
+## - "balanced": class 개수를 균등하게 맞춰 생성
+## - 학습 minibatch sampler와는 별개 옵션
+sampling_strategy = "balanced"
+
+[evaluation]
+## KSComplement 내부 SciPy ks_2samp p-value 계산 방식
+## - "asymp": exact 계산 실패 warning 방지
+## - "auto"/"exact": SciPy 기본 자동/정확 계산
+ks_complement_method = "asymp"
+
+[train]
+epochs = 6600
+lr = 1e-3
+## TADGAN은 stage 3 추가 regularizer가 없으므로
+## total epochs와 무관하게 stage boundary를 고정함
+stage1_end_epoch = 150
+stage2_end_epoch = 500
+
+## checkpoint selection 설정
+[checkpoint_selection]
+enable_best_on_test_selection = true
+selection_save_every = 5
+
+selection_candidate_start_epoch = 501
+## - "stable_fidelity_score": `KSC_full`/`TVC_full` gate + weighted score + neighbor stable score
+## - "best_auc_test": AUC_test가 가장 높은 checkpoint 선택
+## - "gated_best_auc_test": `KSC_full`/`TVC_full` gate 통과 후보 중 AUC_test가 가장 높은 checkpoint 선택
+checkpoint_selection_policy = "stable_fidelity_score"
+checkpoint_selection_use_fidelity_gate = true
+checkpoint_selection_ksc_gate_delta = 0.03
+checkpoint_selection_tvc_gate_delta = 0.02
+checkpoint_selection_auc_weight = 0.60
+checkpoint_selection_ksc_weight = 0.25
+checkpoint_selection_tvc_weight = 0.15
+checkpoint_selection_use_stable_score = true
+checkpoint_selection_current_weight = 0.50
+checkpoint_selection_prev_weight = 0.25
+checkpoint_selection_next_weight = 0.25
+
+[latent]
+latent_dim = 32
+noise_dim = 32
+timesteps = 1000
+
+[loss]
+w_rec = 1.5
+w_kl = 0.01
+w_cls = 1.0
+
+[ablation]
+alpha = 1.0
+
+[stabilization]
+use_lr_scheduler = true
+lr_scheduler_type = "cosine_fixed"
+lr_scheduler_t_max = 10000
+use_r1_penalty = true
+r1_weight = 10.0
+## 학습 minibatch에서 minority class starvation을 줄이기 위한 자동 quota sampler
+## natural이면 기존 shuffle을 유지하고, auto_minority_quota는 조건 충족 시 batch별 최소 minority 개수를 보장함
+batch_sampling_strategy = "auto_minority_quota"
+minority_quota_trigger_ratio = 0.03
+minority_quota_trigger_expected = 8.0
+minority_quota_trigger_zero_prob = 0.02
+minority_max_ratio = 0.05
+use_generator_ema = true
+use_mixed_precision = true
+grad_clip_norm = 1.0
+use_label_smoothing = true
+label_smoothing = 0.05
+use_wide_condition_embedding = true
+## Stage 3 mode seeking 제거
+use_mode_seeking_regularization = false
+mode_seeking_weight = 0.0
+mode_seeking_eps = 1e-6
+
+## Stage 3 latent distribution alignment 제거
+## - 이 설정에서는 stage 3에 추가되는 regularizer가 없으므로 stage 2와 stage 3의 objective가 동일함
+latent_align_weight = 0.0
+stage3_mode_seeking_scale = 0.0
+use_bounded_head = true
+use_continuous_clip = true
+[model.encoder]
+encoder_hidden_dim = 256
+encoder_num_blocks = 3
+use_residual_encoder = true
+
+[model.decoder]
+decoder_hidden_dim = 256
+decoder_num_blocks = 3
+decoder_shared_dim = 128
+decoder_head_hidden_dim = 128
+use_residual_decoder = true
+use_two_layer_decoder_heads = true
+
+[model.generator]
+generator_hidden_dim = 256
+generator_num_blocks = 2
+
+[model.discriminator]
+discriminator_hidden_dim = 256
+discriminator_num_blocks = 2
+use_spectral_norm_discriminator = true

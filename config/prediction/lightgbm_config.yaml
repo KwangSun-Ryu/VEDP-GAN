@@ -1,0 +1,7 @@
+# 모델에 전달할 hyper-parameters
+model_params:
+  objective: binary
+  metric: binary_logloss
+  boosting_type: gbdt
+  verbose: -1
+  n_jobs: 1
