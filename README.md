@@ -1,6 +1,6 @@
 # TADGAN
 
-Official research code structure for TADGAN.
+Temporary research code structure for TADGAN.
 
 This repository contains the tabular data generation model, downstream prediction
 evaluation, and ablation study pipeline used for the experiments.
