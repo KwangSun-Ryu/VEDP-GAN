@@ -9,7 +9,6 @@ env/
 venv/
 
 data/
-exp/
 output/
 result/
 sample/
