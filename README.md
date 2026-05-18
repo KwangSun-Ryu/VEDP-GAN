@@ -26,11 +26,6 @@ TADGAN/
 └── docs/
 ```
 
-The canonical TADGAN architecture is defined in `generation/TADGAN/model.py`.
-The ablation pipeline imports this model directly, while ablation-specific
-training loops, selection logic, and evaluation utilities live in
-`ablation_study`.
-
 ## Model Overview
 
 TADGAN is a tabular data generation model that combines a variational
