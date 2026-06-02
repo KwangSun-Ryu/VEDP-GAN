@@ -11,12 +11,12 @@ import pandas as pd
 import pickle
 import os
 from sklearn.preprocessing import OrdinalEncoder, KBinsDiscretizer
-from utils import DATA_NAME, set_seed
+from utils import set_seed
 
 def create_args():
     """ 명령행 인자 받는 함수 """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, choices=DATA_NAME)
+    parser.add_argument('--data-name', type=str)
     parser.add_argument('--data-dir', type=str, default='./data/ver_3', help='데이터셋 경로')
     parser.add_argument('--seed', type=int, default=42, help='재현성을 위한 SEED 값')
     

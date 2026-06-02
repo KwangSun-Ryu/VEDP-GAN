@@ -18,12 +18,12 @@ from sdv.metadata import SingleTableMetadata
 from generation.TTGAN.ttgan.synthesizer import TTGANWrapper, TTGANSynthesizer
 from generation.TTGAN.scripts.config import TTGANConfig
 from rich import print as rprint
-from utils import DATA_NAME, set_seed
+from utils import set_seed
 
 def create_args():
     """ 명령행 인자 받는 함수 """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, choices=DATA_NAME, help='데이터셋 이름')
+    parser.add_argument('--data-name', type=str, help='데이터셋 이름')
     parser.add_argument('--gen-model-name', choices=["CTGAN-O", "CopulaGAN-O", "TTGAN-O", "CTGAN-CAT", "CopulaGAN-CAT", "TTGAN-CAT"],
                         default='TTGAN-CAT', help='생성 모델 선택')
     parser.add_argument('--data-dir', type=str, default='./data/ver_3', help='데이터셋 경로')

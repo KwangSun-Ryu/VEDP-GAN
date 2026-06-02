@@ -6,9 +6,10 @@
 # 1. Import
 # --------------------------------------------------------------------------------
 import argparse
+import json
 import os
 
-from utils import DATA_NAME, EXCLUDE_DATA_NAME, GEN_MODEL_NAME, METRICS_NAME
+from utils import GEN_MODEL_NAME, METRICS_NAME
 from notify_ntfy import ntfy_notify
 
 from .scripts.ml_evaluation import eval_model_train_and_evaluate
@@ -50,6 +51,27 @@ def _normalize_multiples_values(values):
     return normalized or None
 
 
+def load_dataset_names(data_dir):
+    info_path = os.path.join(data_dir, 'datasets_info.json')
+    if not os.path.exists(info_path):
+        raise FileNotFoundError(f"datasets_info.json이 존재하지 않습니다: {info_path}")
+    with open(info_path, 'r', encoding='utf-8') as file:
+        return list(json.load(file).keys())
+
+
+def validate_dataset_names(data_names, data_dir):
+    dataset_names = load_dataset_names(data_dir)
+    if data_names is None:
+        return dataset_names
+
+    missing = [name for name in data_names if name not in dataset_names]
+    if missing:
+        raise ValueError(
+            f"--data-name에 현재 --data-dir 기준으로 존재하지 않는 데이터셋이 포함되어 있습니다: {missing}")
+
+    return data_names
+
+
 def make_args():
     """
     명령행 인자를 파싱해 평가에 필요한 설정 값을 반환한다.
@@ -61,8 +83,6 @@ def make_args():
                         help='데이터를 생성한 생성 모델 이름 (아무것도 선택하지 않는 경우, 전체 모델에 대해 실행)')
     parser.add_argument('--data-name', type=str, nargs='+',
                         help='어떤 데이터셋을 사용할지 지정 (아무것도 선택하지 않는 경우, 전체 데이터셋 사용)')
-    parser.add_argument('--exclude-data', action=argparse.BooleanOptionalAction,
-                        help='기본 제외 데이터셋 목록 사용 여부')
     parser.add_argument('--data-dir', type=str, default='./data',
                         help='원천 데이터셋 경로')
     parser.add_argument('--save-dir', type=str, default='./output',
@@ -113,13 +133,9 @@ def make_args():
     if args.num_workers is not None and args.num_workers < 1:
         raise ValueError(f"Unsupported --num-workers value: {args.num_workers}")
 
-    if args.data_name is None:
-        args.data_name = DATA_NAME
-    elif isinstance(args.data_name, str):
+    if isinstance(args.data_name, str):
         args.data_name = [args.data_name]
-
-    if args.exclude_data:
-        args.data_name = [name for name in args.data_name if name not in EXCLUDE_DATA_NAME]
+    args.data_name = validate_dataset_names(args.data_name, args.data_dir)
 
     if args.model_name is None:
         args.model_name = GEN_MODEL_NAME

@@ -15,7 +15,7 @@ import os
 import hashlib
 from urllib.parse import quote
 from types import SimpleNamespace
-from utils import DATA_NAME, set_seed
+from utils import set_seed
 from .utils import apply_column_mapping, load_column_map, apply_sampling_noise
 from generation.TTGAN.scripts.config import TTGANConfig
 
@@ -23,7 +23,7 @@ from generation.TTGAN.scripts.config import TTGANConfig
 def create_args():
     """ 명령행 인자 받는 함수 """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, choices=DATA_NAME, help='데이터셋 이름')
+    parser.add_argument('--data-name', type=str, help='데이터셋 이름')
     parser.add_argument('--pred-model-name', type=str,
                     choices=["RF", "CB", "XGB", "LGBM"], 
                     help='어떤 모델(들)을 사용할지 지정 (공백 구분)')

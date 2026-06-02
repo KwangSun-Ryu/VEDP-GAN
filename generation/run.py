@@ -1,7 +1,7 @@
 ''' 데이터셋을 불러와 모델 학습 후, 합성 데이터 생성 '''
 
 from .generator import Generator     # 패키지 개념으로 받아들이기
-from utils import check_time, DATA_NAME, GEN_MODEL_NAME
+from utils import check_time, GEN_MODEL_NAME
 from tqdm.auto import tqdm
 
 import argparse, time, os, json
@@ -11,9 +11,30 @@ import pandas as pd
 from notify_ntfy import ntfy_notify
 
 
+def load_dataset_names(data_dir):
+    info_path = os.path.join(data_dir, 'datasets_info.json')
+    if not os.path.exists(info_path):
+        raise FileNotFoundError(f"datasets_info.json이 존재하지 않습니다: {info_path}")
+    with open(info_path, 'r', encoding='utf-8') as file:
+        return list(json.load(file).keys())
+
+
+def validate_dataset_names(data_names, data_dir):
+    dataset_names = load_dataset_names(data_dir)
+    if data_names is None:
+        return dataset_names
+
+    missing = [name for name in data_names if name not in dataset_names]
+    if missing:
+        raise ValueError(
+            f"--data-name에 현재 --data-dir 기준으로 존재하지 않는 데이터셋이 포함되어 있습니다: {missing}")
+
+    return data_names
+
+
 def create_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, choices=DATA_NAME, nargs='+', help='데이터셋 이름')
+    parser.add_argument('--data-name', type=str, nargs='+', help='데이터셋 이름')
     parser.add_argument('--model-name', type=str, choices=GEN_MODEL_NAME, nargs='+', help='생성 모델 이름')
     parser.add_argument('--data-dir', type=str, default='./data', help='데이터셋 경로')
     parser.add_argument('--exp-dir', type=str, default='./exp', help='모델 가중치, 각종 실험 파일 저장 경로')
@@ -27,15 +48,13 @@ def create_args():
     parser.add_argument('--verbose-model', action='store_true', help='모델 내부 진행 로그 출력 여부')
 
     args = parser.parse_args()
+    args.data_name = validate_dataset_names(args.data_name, args.data_dir)
     return args
 
 
 @ntfy_notify(title='모델 학습 & 합성 데이터 생성', notify_on='both')
 def main():
     args = create_args()
-
-    if args.data_name is None:
-        args.data_name = DATA_NAME
 
     if args.model_name is None:
         args.model_name = GEN_MODEL_NAME

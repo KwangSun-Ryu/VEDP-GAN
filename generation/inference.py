@@ -17,8 +17,29 @@ import os
 import json
 import pandas as pd
 
-from utils import DATA_NAME, GEN_MODEL_NAME, set_seed
+from utils import GEN_MODEL_NAME, set_seed
 from notify_ntfy import ntfy_notify
+
+
+def load_dataset_names(data_dir):
+    info_path = os.path.join(data_dir, 'datasets_info.json')
+    if not os.path.exists(info_path):
+        raise FileNotFoundError(f"datasets_info.json이 존재하지 않습니다: {info_path}")
+    with open(info_path, 'r', encoding='utf-8') as file:
+        return list(json.load(file).keys())
+
+
+def validate_dataset_names(data_names, data_dir):
+    dataset_names = load_dataset_names(data_dir)
+    if data_names is None:
+        return dataset_names
+
+    missing = [name for name in data_names if name not in dataset_names]
+    if missing:
+        raise ValueError(
+            f"--data-name에 현재 --data-dir 기준으로 존재하지 않는 데이터셋이 포함되어 있습니다: {missing}")
+
+    return data_names
 
 
 def get_temp_path(path):
@@ -54,7 +75,7 @@ def _atomic_write_csv(df, path):
 def create_args():
     """명령행 인자를 파싱"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, choices=DATA_NAME, nargs='+', help='데이터셋 이름')
+    parser.add_argument('--data-name', type=str, nargs='+', help='데이터셋 이름')
     parser.add_argument('--model-name', type=str, choices=GEN_MODEL_NAME, nargs='+', help='생성 모델 이름')
     parser.add_argument('--data-dir', type=str, default='./data/ver_3', help='데이터셋 경로')
     parser.add_argument('--exp-dir', type=str, default='./exp/run_03', help='모델 가중치, 메타정보 저장 경로')
@@ -71,8 +92,7 @@ def create_args():
 
     args = parser.parse_args()
 
-    if args.data_name is None:
-        args.data_name = DATA_NAME
+    args.data_name = validate_dataset_names(args.data_name, args.data_dir)
     if args.model_name is None:
         args.model_name = GEN_MODEL_NAME
 
