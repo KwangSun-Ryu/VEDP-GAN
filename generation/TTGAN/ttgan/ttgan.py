@@ -34,6 +34,7 @@ except ImportError:  # pragma: no cover
 from ctgan.data_sampler import DataSampler
 from ctgan.data_transformer import DataTransformer
 from ctgan.synthesizers.base import BaseSynthesizer, random_state
+from generation.selection import should_save_candidate
 
 
 def _make_grad_scaler(use_amp, device_type: str):
@@ -254,7 +255,8 @@ class TTGAN(BaseSynthesizer):
                  dynamic_weight_end=1.0, use_kl_anneal=False, use_lr_scheduler=False,
                  use_r1_penalty=False, r1_weight=10.0, use_generator_ema=False, ema_decay=0.999,
                  use_mixed_precision=False, grad_clip_norm=1.0, use_label_smoothing=False,
-                 label_smoothing=0.05):
+                 label_smoothing=0.05, selection_candidate_start_epoch=None,
+                 selection_save_every=None):
 
         assert batch_size % 2 == 0
 
@@ -281,6 +283,8 @@ class TTGAN(BaseSynthesizer):
         self._grad_clip_norm = grad_clip_norm
         self._use_label_smoothing = use_label_smoothing
         self._label_smoothing = label_smoothing
+        self._selection_candidate_start_epoch = selection_candidate_start_epoch
+        self._selection_save_every = selection_save_every
 
         self._generator_lr = generator_lr
         self._generator_decay = generator_decay
@@ -665,6 +669,18 @@ class TTGAN(BaseSynthesizer):
             if scheduler_d is not None:
                 scheduler_d.step()
 
+            if self._checkpoint and self._selection_candidate_start_epoch is not None:
+                epoch_num = epoch_idx + 1
+                if should_save_candidate(
+                    epoch_num,
+                    self._selection_candidate_start_epoch,
+                    self._selection_save_every,
+                    epochs,
+                ):
+                    candidate_dir = os.path.join(self._checkpoint, "candidates", f"epoch_{epoch_num:04d}")
+                    os.makedirs(candidate_dir, exist_ok=True)
+                    torch.save(self._generator.state_dict(), os.path.join(candidate_dir, "generator.pt"))
+
         if ema_generator is not None:
             self._generator.load_state_dict(ema_generator.state_dict())
             self._ema_generator_state = ema_generator.state_dict()
@@ -673,6 +689,9 @@ class TTGAN(BaseSynthesizer):
             os.makedirs(self._checkpoint, exist_ok=True)
             torch.save(self._generator.state_dict(),
                        os.path.join(self._checkpoint, "generator.pt"))
+            last_dir = os.path.join(self._checkpoint, "last")
+            os.makedirs(last_dir, exist_ok=True)
+            torch.save(self._generator.state_dict(), os.path.join(last_dir, "generator.pt"))
 
     @random_state
     def sample(self, n, condition_column=None, condition_value=None):

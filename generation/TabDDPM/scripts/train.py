@@ -7,9 +7,12 @@ from generation.TabDDPM import lib
 from generation.TabDDPM.tab_ddpm import GaussianMultinomialDiffusion
 from .utils_train import get_model, make_dataset, update_ema
 import pandas as pd
+from generation.selection import should_save_candidate
 
 class Trainer:
-    def __init__(self, diffusion, train_iter, lr, weight_decay, steps, device=torch.device('cuda:0')):
+    def __init__(self, diffusion, train_iter, lr, weight_decay, steps, device=torch.device('cuda:0'),
+                 selection_enabled=False, candidate_start_step=None, selection_save_every=None,
+                 checkpoints_dir=None):
         self.diffusion = diffusion
         self.ema_model = deepcopy(self.diffusion._denoise_fn)
         for param in self.ema_model.parameters():
@@ -24,6 +27,10 @@ class Trainer:
         self.log_every = 100
         self.print_every = 1000
         self.ema_every = 1000
+        self.selection_enabled = bool(selection_enabled)
+        self.candidate_start_step = candidate_start_step
+        self.selection_save_every = selection_save_every
+        self.checkpoints_dir = checkpoints_dir
 
     def _anneal_lr(self, step):
         frac_done = step / self.steps
@@ -42,6 +49,19 @@ class Trainer:
         self.optimizer.step()
 
         return loss_multi, loss_gauss
+
+    def _save_candidate(self, step):
+        if not self.selection_enabled or self.checkpoints_dir is None:
+            return
+        if not should_save_candidate(step, self.candidate_start_step, self.selection_save_every, self.steps):
+            return
+        os.makedirs(self.checkpoints_dir, exist_ok=True)
+        torch.save(
+            self.diffusion._denoise_fn.state_dict(),
+            os.path.join(self.checkpoints_dir, f"step_{step:05d}.pt"))
+        torch.save(
+            self.ema_model.state_dict(),
+            os.path.join(self.checkpoints_dir, f"step_{step:05d}_ema.pt"))
 
     def run_loop(self):
         step = 0
@@ -73,6 +93,7 @@ class Trainer:
             update_ema(self.ema_model.parameters(), self.diffusion._denoise_fn.parameters())
 
             step += 1
+            self._save_candidate(step)
 
 def train(
     parent_dir,
@@ -90,7 +111,11 @@ def train(
     num_numerical_features = 0,
     device = torch.device('cuda:1'),
     seed = 0,
-    change_val = False ):
+    change_val = False,
+    selection_enabled = False,
+    candidate_start_step = None,
+    selection_save_every = None,
+    checkpoints_dir = None ):
     
     real_data_dir = os.path.normpath(real_data_dir)
     parent_dir = os.path.normpath(parent_dir)
@@ -140,10 +165,18 @@ def train(
         lr=lr,
         weight_decay=weight_decay,
         steps=steps,
-        device=device )
+        device=device,
+        selection_enabled=selection_enabled,
+        candidate_start_step=candidate_start_step,
+        selection_save_every=selection_save_every,
+        checkpoints_dir=checkpoints_dir )
 
     trainer.run_loop()
 
     trainer.loss_history.to_csv(os.path.join(parent_dir, 'loss.csv'), index=False)
     torch.save(diffusion._denoise_fn.state_dict(), os.path.join(parent_dir, 'model.pt'))
     torch.save(trainer.ema_model.state_dict(), os.path.join(parent_dir, 'model_ema.pt'))
+    if checkpoints_dir is not None:
+        os.makedirs(checkpoints_dir, exist_ok=True)
+        torch.save(diffusion._denoise_fn.state_dict(), os.path.join(checkpoints_dir, 'model_last.pt'))
+        torch.save(trainer.ema_model.state_dict(), os.path.join(checkpoints_dir, 'model_last_ema.pt'))

@@ -42,6 +42,7 @@ from generation.STaSy.models import ncsnpp_tabular
 from generation.STaSy.models import utils as mutils
 from generation.STaSy.models.ema import ExponentialMovingAverage
 from .utils import save_checkpoint, restore_checkpoint, apply_activate
+from generation.selection import flatten_config, load_model_selection_config, should_save_candidate
 
 FLAGS = flags.FLAGS
 LOG_FORMAT = '%(levelname)s - %(filename)s - %(asctime)s - %(message)s'
@@ -240,6 +241,11 @@ def run_training_loop(config,
         range(initial_epoch, config.training.epoch),
         desc=desc,
         leave=False)
+    selection_flat = flatten_config(load_model_selection_config("STaSy"))
+    candidate_start = min(config.training.epoch, selection_flat.get("selection_candidate_start_epoch", 5001))
+    candidate_every = selection_flat.get("selection_save_every", 500)
+    checkpoint_store_dir = Path(run_dir) / 'checkpoints'
+    checkpoint_store_dir.mkdir(parents=True, exist_ok=True)
 
     for epoch in progress:
         state['epoch'] = epoch + 1
@@ -256,13 +262,18 @@ def run_training_loop(config,
             logging.info("Epoch %d complete | loss=%.4f", epoch + 1, latest_loss)
 
         save_checkpoint(checkpoint_meta_path, state)
+        if should_save_candidate(epoch + 1, candidate_start, candidate_every, config.training.epoch):
+            candidate_dir = checkpoint_store_dir / 'candidates' / f"epoch_{epoch + 1:04d}"
+            candidate_dir.mkdir(parents=True, exist_ok=True)
+            save_checkpoint(candidate_dir / checkpoint_name, state)
 
     ema.copy_to(score_model.parameters())
     save_checkpoint(checkpoint_meta_path, state)
 
-    checkpoint_store_dir = Path(run_dir) / 'checkpoints'
-    checkpoint_store_dir.mkdir(parents=True, exist_ok=True)
     save_checkpoint(checkpoint_store_dir / checkpoint_name, state)
+    last_dir = checkpoint_store_dir / 'last'
+    last_dir.mkdir(parents=True, exist_ok=True)
+    save_checkpoint(last_dir / checkpoint_name, state)
 
     writer.close()
     logging.info("Training finished for {}. Checkpoint saved to {}".format(desc, checkpoint_store_dir / checkpoint_name))
@@ -315,6 +326,8 @@ def train(config,
           log_every: int = 100,
           is_balanced: bool = False):
     set_random_seed(42)
+    selection_flat = flatten_config(load_model_selection_config("STaSy"))
+    config.training.epoch = selection_flat.get("epochs", config.training.epoch)
 
     dataset_name = config.data.dataset
     run_dir = prepare_run_dir(exp_dir, dataset_name, init_folder)
@@ -461,8 +474,15 @@ def sample(config, data_dir, exp_dir, save_dir, is_balanced=False, seed=42, save
         sampling_eps,
         (config.training.batch_size, config.data.image_size))
     checkpoint_dir = run_dir / 'checkpoints'
+    checkpoint_override_dir = getattr(config, 'checkpoint_override_dir', None)
+    if checkpoint_override_dir:
+        checkpoint_dir = Path(checkpoint_override_dir)
+    else:
+        checkpoint_dir = checkpoint_dir / 'best_on_test'
+    if not checkpoint_dir.exists():
+        raise FileNotFoundError(f"STaSy best_on_test checkpoint directory not found: {checkpoint_dir}")
     checkpoint_meta_dir = run_dir / 'checkpoints-meta'
-    ensure_dirs(checkpoint_dir, checkpoint_meta_dir)
+    ensure_dirs(checkpoint_meta_dir)
 
     def apply_categorical_mappings(df: pd.DataFrame) -> pd.DataFrame:
         if not categorical_mappings:

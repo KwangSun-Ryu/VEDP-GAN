@@ -123,18 +123,21 @@ class TabularDataLoader():
             return SimpleNamespace(**data_loader)
 
         if self.model_name == "TADGAN":
-            from ablation_study.scripts.dataloader import make_dataloader
+            from generation.TADGAN.scripts import dataloader as tadgan_dataloader
 
             tadgan_args = SimpleNamespace(
                 data_name=self.data_name,
                 data_dir=self.data_dir,
                 model_name=self.model_name,
                 batch_size=256,
-                max_cat_unique=7,
-                num_workers=0,
-                bin_threshold=0.5 )
+                num_workers=2,
+                bin_threshold=0.5,
+                device="cuda" )
 
-            return make_dataloader(tadgan_args)
+            return tadgan_dataloader.make_dataloader(tadgan_args)
+
+        if self.model_name in {"TADGAN_ver1", "TADGAN_ver2", "TADGAN_ver3"}:
+            raise ValueError("TADGAN_ver1/2/3 are legacy names. Use TADGAN.")
 
     def load_cols_info_path(self):
         '''

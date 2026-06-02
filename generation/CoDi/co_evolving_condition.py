@@ -22,6 +22,7 @@ from .utils import (
     sampling_with,
     training_with,
     warmup_lr )
+from generation.selection import flatten_config, load_model_selection_config, should_save_candidate
 
 def _train_single_run(
     class_key,
@@ -39,8 +40,12 @@ def _train_single_run(
     samples, con_dim = train_con_np.shape
     _, dis_dim = train_dis_np.shape
 
+    selection_flat = flatten_config(load_model_selection_config("CoDi"))
+    total_epochs = selection_flat.get("total_epochs_both", FLAGS.total_epochs_both)
     steps_per_epoch = math.ceil(samples / FLAGS.training_batch_size)
-    total_steps = FLAGS.total_epochs_both * steps_per_epoch
+    total_steps = total_epochs * steps_per_epoch
+    candidate_start = min(total_epochs, selection_flat.get("selection_candidate_start_epoch", 10001))
+    candidate_every = selection_flat.get("selection_save_every", 1000)
 
     logging.info(
         "[%s] samples: %d, con_dim: %d, dis_dim: %d, total_steps: %d",
@@ -98,6 +103,11 @@ def _train_single_run(
     logging.info(f'Continuous model params: {num_params_con:,}')
     logging.info(f'Discrete model params: {num_params_dis:,}')
 
+    def _checkpoint_payload():
+        return {
+            'model_con': model_con.state_dict(),
+            'model_dis': model_dis.state_dict() }
+
     for step in tqdm(range(total_steps), desc='train', total=total_steps, leave=True):
         if has_con:
             model_con.train()
@@ -135,11 +145,19 @@ def _train_single_run(
         optim_dis.step()
         sched_dis.step()
 
-    checkpoint = {
-        'model_con': model_con.state_dict(),
-        'model_dis': model_dis.state_dict() }
+        if (step + 1) % steps_per_epoch == 0:
+            epoch_num = (step + 1) // steps_per_epoch
+            if should_save_candidate(epoch_num, candidate_start, candidate_every, total_epochs):
+                candidate_dir = os.path.join(exp_dir, "candidates", f"epoch_{epoch_num:04d}")
+                os.makedirs(candidate_dir, exist_ok=True)
+                torch.save(_checkpoint_payload(), os.path.join(candidate_dir, checkpoint_name))
+
+    checkpoint = _checkpoint_payload()
     
     torch.save(checkpoint, os.path.join(exp_dir, checkpoint_name))
+    last_dir = os.path.join(exp_dir, "last")
+    os.makedirs(last_dir, exist_ok=True)
+    torch.save(checkpoint, os.path.join(last_dir, checkpoint_name))
     logging.info(f"[{class_key}] Saved checkpoint: {checkpoint_name}")
 
 
@@ -312,6 +330,17 @@ def train(FLAGS):
     FLAGS = flags.FLAGS
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     exp_dir = os.path.join(FLAGS.exp_dir, FLAGS.data)
+    checkpoint_override_dir = getattr(FLAGS, "checkpoint_override_dir", None)
+    if checkpoint_override_dir:
+        exp_dir = checkpoint_override_dir
+    else:
+        for candidate_dir in (
+            os.path.join(exp_dir, "best_on_test"),
+            os.path.join(exp_dir, "last"),
+        ):
+            if os.path.exists(candidate_dir):
+                exp_dir = candidate_dir
+                break
 
     (   _train_raw,
         train_con_data,
@@ -363,7 +392,13 @@ def sample(FLAGS, save=True, output_path=None, verbose=True):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     data_dir = os.path.join(FLAGS.data_dir, FLAGS.data)
-    exp_dir = os.path.join(FLAGS.exp_dir, FLAGS.data)
+    checkpoint_override_dir = getattr(FLAGS, "checkpoint_override_dir", None)
+    if checkpoint_override_dir:
+        exp_dir = checkpoint_override_dir
+    else:
+        exp_dir = os.path.join(FLAGS.exp_dir, FLAGS.data, "best_on_test")
+    if not os.path.exists(exp_dir):
+        raise FileNotFoundError(f"CoDi best_on_test checkpoint directory not found: {exp_dir}")
     if save:
         os.makedirs(FLAGS.save_dir, exist_ok=True)
 

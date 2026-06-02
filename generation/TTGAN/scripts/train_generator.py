@@ -18,12 +18,13 @@ from sdv.metadata import SingleTableMetadata
 from generation.TTGAN.ttgan.synthesizer import TTGANWrapper, TTGANSynthesizer
 from generation.TTGAN.scripts.config import TTGANConfig
 from rich import print as rprint
-from utils import set_seed
+from utils import DATA_NAME, set_seed
+from generation.selection import flatten_config, load_model_selection_config
 
 def create_args():
     """ 명령행 인자 받는 함수 """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, help='데이터셋 이름')
+    parser.add_argument('--data-name', type=str, choices=DATA_NAME, help='데이터셋 이름')
     parser.add_argument('--gen-model-name', choices=["CTGAN-O", "CopulaGAN-O", "TTGAN-O", "CTGAN-CAT", "CopulaGAN-CAT", "TTGAN-CAT"],
                         default='TTGAN-CAT', help='생성 모델 선택')
     parser.add_argument('--data-dir', type=str, default='./data/ver_3', help='데이터셋 경로')
@@ -86,6 +87,8 @@ def train_generator(args):
     data, target, metadata, class_labels = load_data(args)
     config = TTGANConfig()
     config.load_from_exp(args)
+    selection_flat = flatten_config(load_model_selection_config("TTGAN"))
+    config.epochs = selection_flat.get("epochs", config.epochs)
     
     if args.gen_model_name == "TTGAN-CAT":
         # 2) 경로 지정 & 생성
@@ -94,6 +97,10 @@ def train_generator(args):
         
         # 3) 모델 파라미터 지정
         synth_kwargs = config.to_synth_kwargs()
+        synth_kwargs.update({
+            "selection_candidate_start_epoch": min(config.epochs, selection_flat.get("selection_candidate_start_epoch", 1001)),
+            "selection_save_every": selection_flat.get("selection_save_every", 100),
+        })
         if config.classwise_training:
             model_config = dict(
                 metadata     = metadata,

@@ -88,6 +88,8 @@ def create_args():
                         help='합성 데이터 class 분포 전략')
     parser.add_argument('--config', type=str, default='./config/generation/tadgan.toml',
                         help='TADGAN 샘플링 TOML config 경로')
+    parser.add_argument('--eval-model-config-dir', type=str, default='./config/prediction',
+                        help='checkpoint selection 평가 모델 config 경로')
     parser.add_argument('--verbose-model', action='store_true', help='모델 내부 진행 로그 출력 여부')
 
     args = parser.parse_args()
@@ -136,7 +138,8 @@ def main():
                     verbose=args.verbose_model,
                     prepare_data=False,
                     sampling_strategy=args.sampling_strategy,
-                    config_path=args.config)
+                    config_path=args.config,
+                    eval_model_config_dir=args.eval_model_config_dir)
 
                 data_frames = []
                 for multiple in range(args.multiplier):

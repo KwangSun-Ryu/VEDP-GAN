@@ -21,5 +21,5 @@ generation/TADGAN/
 - `DecoderMixed`: decoder with continuous and discrete output heads
 - `TADGAN`: end-to-end model that combines the modules above
 
-Experiment orchestration, ablation variants, checkpoint selection, and
-evaluation utilities are intentionally kept in `ablation_study`.
+Generation orchestration, checkpoint selection, and sampling utilities are
+restored inside `generation/TADGAN/scripts` for standalone public execution.

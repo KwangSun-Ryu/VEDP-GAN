@@ -15,7 +15,7 @@ import os
 import hashlib
 from urllib.parse import quote
 from types import SimpleNamespace
-from utils import set_seed
+from utils import DATA_NAME, set_seed
 from .utils import apply_column_mapping, load_column_map, apply_sampling_noise
 from generation.TTGAN.scripts.config import TTGANConfig
 
@@ -23,7 +23,7 @@ from generation.TTGAN.scripts.config import TTGANConfig
 def create_args():
     """ 명령행 인자 받는 함수 """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, help='데이터셋 이름')
+    parser.add_argument('--data-name', type=str, choices=DATA_NAME, help='데이터셋 이름')
     parser.add_argument('--pred-model-name', type=str,
                     choices=["RF", "CB", "XGB", "LGBM"], 
                     help='어떤 모델(들)을 사용할지 지정 (공백 구분)')
@@ -92,7 +92,13 @@ def load_generator(args):
     with open(model_path, 'rb') as fp:
         model = pickle.load(fp)
 
-    unified_ckpt = os.path.join(exp_dir, 'generator.pt')
+    override_dir = getattr(args, 'checkpoint_override_dir', None)
+    if override_dir:
+        unified_ckpt = os.path.join(override_dir, 'generator.pt')
+    else:
+        unified_ckpt = os.path.join(exp_dir, 'best_on_test', 'generator.pt')
+    if not os.path.exists(unified_ckpt):
+        raise FileNotFoundError(f"TTGAN best_on_test generator checkpoint not found: {unified_ckpt}")
 
     if hasattr(model, 'models'):  # 과거 class-wise 래퍼
         for label, synth in zip(model.class_labels, model.models):

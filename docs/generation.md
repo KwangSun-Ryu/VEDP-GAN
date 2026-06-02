@@ -12,6 +12,7 @@ python main.py generation \
   --exp-dir ./exp/generation \
   --save-dir ./output \
   --config ./config/generation/tadgan.toml \
+  --eval-model-config-dir ./config/prediction \
   --verbose-model
 ```
 
@@ -24,7 +25,8 @@ python main.py generation \
   --data-dir ../data/ver_06 \
   --exp-dir ./exp/generation \
   --save-dir ./output \
-  --config ./config/generation/tadgan.toml
+  --config ./config/generation/tadgan.toml \
+  --eval-model-config-dir ./config/prediction
 ```
 
 ## 다른 generator 포함 실행

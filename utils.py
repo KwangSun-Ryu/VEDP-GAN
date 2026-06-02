@@ -1,3 +1,4 @@
+import os
 import shutil
 from wcwidth import wcswidth
 
@@ -39,6 +40,19 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
 
     return seed
+
+def resolve_eval_model_config_dir(path=None):
+    requested = path or "./config/prediction"
+    if os.path.exists(requested):
+        return requested
+
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    default_path = os.path.join(project_root, "config", "prediction")
+    if os.path.normpath(requested) == os.path.normpath("./config/prediction"):
+        if os.path.exists(default_path):
+            return default_path
+
+    return requested
 
 def terminal_width():
     """ terminal size 반환하는 함수"""

@@ -1,0 +1,18 @@
+[train]
+epochs = 2000
+
+[checkpoint_selection]
+enable_best_on_test_selection = true
+selection_candidate_start_epoch = 1001
+selection_save_every = 100
+checkpoint_selection_policy = "stable_fidelity_score"
+checkpoint_selection_use_fidelity_gate = true
+checkpoint_selection_ksc_gate_delta = 0.03
+checkpoint_selection_tvc_gate_delta = 0.02
+checkpoint_selection_auc_weight = 0.60
+checkpoint_selection_ksc_weight = 0.25
+checkpoint_selection_tvc_weight = 0.15
+checkpoint_selection_use_stable_score = true
+checkpoint_selection_current_weight = 0.50
+checkpoint_selection_prev_weight = 0.25
+checkpoint_selection_next_weight = 0.25

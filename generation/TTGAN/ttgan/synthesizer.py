@@ -75,7 +75,8 @@ class TTGANSynthesizer(BaseSingleTableSynthesizer):
                  dynamic_weight_end=1.0, use_kl_anneal=False, use_lr_scheduler=False,
                  use_r1_penalty=False, r1_weight=10.0, use_generator_ema=False, ema_decay=0.999,
                  use_mixed_precision=False, grad_clip_norm=1.0, use_label_smoothing=False,
-                 label_smoothing=0.05):
+                 label_smoothing=0.05, selection_candidate_start_epoch=None,
+                 selection_save_every=None):
 
         super().__init__(
             metadata=metadata,
@@ -118,6 +119,8 @@ class TTGANSynthesizer(BaseSingleTableSynthesizer):
         self.grad_clip_norm = grad_clip_norm
         self.use_label_smoothing = use_label_smoothing
         self.label_smoothing = label_smoothing
+        self.selection_candidate_start_epoch = selection_candidate_start_epoch
+        self.selection_save_every = selection_save_every
 
         self._model_kwargs = {
             'target': target,
@@ -154,6 +157,8 @@ class TTGANSynthesizer(BaseSingleTableSynthesizer):
             'grad_clip_norm': grad_clip_norm,
             'use_label_smoothing': use_label_smoothing,
             'label_smoothing': label_smoothing,
+            'selection_candidate_start_epoch': selection_candidate_start_epoch,
+            'selection_save_every': selection_save_every,
         }
 
     def _fit(self, processed_data):

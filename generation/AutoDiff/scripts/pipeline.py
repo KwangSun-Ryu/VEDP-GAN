@@ -3,6 +3,7 @@
 import os
 import json
 import tomllib
+import copy
 from types import SimpleNamespace
 
 import pandas as pd
@@ -14,9 +15,18 @@ from .. import diffusion as diff
 from .. import TabDDPMdiff as TabDiff
 
 from utils import set_seed
+from generation.selection import (
+    flatten_config,
+    load_model_selection_config,
+    selection_enabled,
+    should_save_candidate,
+)
 
 # 기본 설정 파일 경로
 _DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.toml')
+_MODEL_CONFIG_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', '..', '..', 'config', 'generation', 'autodiff.toml')
+)
 
 
 def _load_config(args):
@@ -28,8 +38,24 @@ def _load_config(args):
         base_dir = os.path.dirname(__file__)
         config_path = os.path.join(base_dir, config_path)
 
-    with open(config_path, 'rb') as file:
+    with open(_DEFAULT_CONFIG_PATH, 'rb') as file:
         config = tomllib.load(file)
+    if os.path.abspath(config_path) != os.path.abspath(_DEFAULT_CONFIG_PATH):
+        with open(config_path, 'rb') as file:
+            override = tomllib.load(file)
+        for section, values in override.items():
+            if isinstance(values, dict) and isinstance(config.get(section), dict):
+                config[section].update(values)
+            else:
+                config[section] = values
+    if os.path.exists(_MODEL_CONFIG_PATH):
+        with open(_MODEL_CONFIG_PATH, 'rb') as file:
+            override = tomllib.load(file)
+        for section, values in override.items():
+            if isinstance(values, dict) and isinstance(config.get(section), dict):
+                config[section].update(values)
+            else:
+                config[section] = values
     return config
 
 
@@ -174,6 +200,11 @@ def _train_model(args, dataloaders, verbose=True):
     TabDiff.device = device_str
 
     class_models = {}
+    selection_config = load_model_selection_config("AutoDiff")
+    selection_flat = flatten_config(selection_config)
+    candidate_enabled = selection_enabled(selection_config)
+    candidate_states = {}
+    checkpoints_dir = os.path.join(getattr(args, 'exp_dir', './exp/AutoDiff'), getattr(args, 'data_name'), 'checkpoints')
 
     for class_label in sorted(dataloaders.class_payloads.keys()):
         payload = dataloaders.class_payloads[class_label]
@@ -203,6 +234,16 @@ def _train_model(args, dataloaders, verbose=True):
         diff_batch = min(diff_cfg.get('batch_size', 50), len(source_df))
         diff_batch = max(diff_batch, 1)
         diff_epochs = diff_cfg.get('diff_n_epochs', diff_cfg.get('n_epochs', 100))
+        candidate_start = min(diff_epochs, selection_flat.get('selection_candidate_start_epoch', 5001))
+        candidate_every = selection_flat.get('selection_save_every', 500)
+
+        def _candidate_callback(epoch, state_dict):
+            if not candidate_enabled:
+                return
+            if not should_save_candidate(epoch, candidate_start, candidate_every, diff_epochs):
+                return
+            epoch_states = candidate_states.setdefault(epoch, {})
+            epoch_states[class_label] = {key: value.detach().cpu() for key, value in state_dict.items()}
 
         score_model = TabDiff.train_diffusion(
             latent_tensor,
@@ -215,7 +256,8 @@ def _train_model(args, dataloaders, verbose=True):
             diff_cfg.get('weight_decay', 1e-6),
             diff_epochs,
             diff_batch,
-            show_progress=verbose )
+            show_progress=verbose,
+            candidate_callback=_candidate_callback )
 
         ae_state = {key: value.cpu() for key, value in ae_model.state_dict().items()}
         score_state = {key: value.cpu() for key, value in score_model.state_dict().items()}
@@ -258,6 +300,16 @@ def _train_model(args, dataloaders, verbose=True):
     ckpt_path = os.path.join(getattr(args, 'exp_dir', './exp/AutoDiff'), f"{ckpt['data_name']}_{ckpt['model_name']}.pt")
     os.makedirs(os.path.dirname(ckpt_path), exist_ok=True)
     torch.save(ckpt, ckpt_path)
+    os.makedirs(checkpoints_dir, exist_ok=True)
+    torch.save(ckpt, os.path.join(checkpoints_dir, "last.pt"))
+
+    for epoch, state_by_class in candidate_states.items():
+        if set(state_by_class.keys()) != set(class_models.keys()):
+            continue
+        candidate_ckpt = copy.deepcopy(ckpt)
+        for class_label, state in state_by_class.items():
+            candidate_ckpt['class_models'][class_label]['diffusion']['state'] = state
+        torch.save(candidate_ckpt, os.path.join(checkpoints_dir, f"epoch_{epoch:04d}.pt"))
 
     return {'ckpt_path': ckpt_path, 'state': ckpt}
 

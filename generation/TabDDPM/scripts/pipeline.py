@@ -16,6 +16,7 @@ import torch
 from generation.TabDDPM import lib
 from .sample import sample
 from .train import train
+from generation.selection import flatten_config, load_model_selection_config, selection_enabled
 
 
 def load_or_create_config(config_path, is_train):
@@ -31,7 +32,8 @@ def load_or_create_config(config_path, is_train):
     return lib.load_config(str(config_path)), True
 
 
-def run_sample(data_name, data_dir, exp_dir, save_dir=None, sample_seed=None, change_val=False, save=True, output_path=None, verbose=True):
+def run_sample(data_name, data_dir, exp_dir, save_dir=None, sample_seed=None, change_val=False,
+               save=True, output_path=None, model_path=None, verbose=True):
     """TabDDPM 샘플링을 실행하고 생성 DataFrame을 반환한다."""
     config_path = os.path.join(exp_dir, data_name, 'config.toml')
     raw_config, _ = load_or_create_config(config_path, is_train=False)
@@ -71,7 +73,7 @@ def run_sample(data_name, data_dir, exp_dir, save_dir=None, sample_seed=None, ch
         'disbalance': sample_cfg.get('disbalance'),
         'parent_dir': str(parent_dir),
         'real_data_dir': str(real_data_dir),
-        'model_path': str(parent_dir / 'model.pt'),
+        'model_path': str(model_path or (parent_dir / 'model.pt')),
         'model_type': raw_config['model_type'],
         'model_params': copy.deepcopy(raw_config['model_params']),
         'T_dict': raw_config['train']['T'],
@@ -105,6 +107,14 @@ def main():
 
     args.config = os.path.join(args.exp_dir, args.data_name, 'config.toml')
     raw_config, _ = load_or_create_config(args.config, args.train)
+    selection_config = load_model_selection_config("TabDDPM")
+    selection_flat = flatten_config(selection_config)
+    raw_config['train']['main']['steps'] = selection_flat.get(
+        'steps',
+        raw_config['train']['main'].get('steps', 10000),
+    )
+    if args.train:
+        lib.dump_config(raw_config, args.config)
 
     device = torch.device(raw_config.get('device', 'cpu'))
     parent_dir = Path(args.exp_dir) / args.data_name
@@ -116,6 +126,8 @@ def main():
     num_numerical_features = int(info['n_num_features'])
 
     if args.train:
+        checkpoints_dir = str(parent_dir / "checkpoints")
+        total_steps = raw_config['train']['main'].get('steps', 10000)
         train_kwargs = {
             **raw_config['train']['main'],
             **raw_config['diffusion_params'],
@@ -127,7 +139,11 @@ def main():
             'num_numerical_features': num_numerical_features,
             'device': device,
             'change_val': args.change_val,
-            'seed': raw_config['seed']
+            'seed': raw_config['seed'],
+            'selection_enabled': selection_enabled(selection_config),
+            'candidate_start_step': min(total_steps, selection_flat.get('selection_candidate_start_step', 5001)),
+            'selection_save_every': selection_flat.get('selection_save_every', 500),
+            'checkpoints_dir': checkpoints_dir,
         }
         train(**train_kwargs)
 

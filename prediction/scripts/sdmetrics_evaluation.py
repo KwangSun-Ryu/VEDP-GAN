@@ -1,31 +1,102 @@
-"""
-SDMetrics 기반 Fidelity & Diversity 평가 스크립트
-"""
+"""Fidelity and diversity evaluation with train/test/full reference scopes."""
+
 import os
-import multiprocessing as mp
-import threading
+
 import numpy as np
 import pandas as pd
-
-from sdmetrics.single_column import KSComplement, TVComplement
-from sdmetrics.single_column import RangeCoverage, CategoryCoverage
+from scipy.stats import ks_2samp
+from sdmetrics.single_column import CategoryCoverage, RangeCoverage, TVComplement
 
 from ..dataloader import TabularDataset
 from .progress_reporter import NullProgressReporter
 
-METRIC_MAPPING_KEY = {
-    "con_cols": [KSComplement, RangeCoverage],
-    "cat_cols": [TVComplement, CategoryCoverage] }
+
+REFERENCE_SCOPES = ("train", "test", "full")
+FIDELITY_METRICS = ("KSComplement", "TVComplement")
+DIVERSITY_METRICS = ("RangeCoverage", "CategoryCoverage")
+MAX_DECIMALS = 14
+KS_COMPLEMENT_METHODS = ("auto", "exact", "asymp")
+DEFAULT_KS_COMPLEMENT_METHOD = "asymp"
 
 
-def _configure_mp_safety():
-    ## Avoid oversubscription in multiprocessing workers.
-    for key in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
-        os.environ.setdefault(key, "1")
+def _resolve_ks_complement_method(value=None):
+    if hasattr(value, "ks_complement_method"):
+        method = getattr(value, "ks_complement_method")
+    elif isinstance(value, str):
+        method = value
+    else:
+        method = None
+    if method is None:
+        method = DEFAULT_KS_COMPLEMENT_METHOD
+    method = str(method).strip().lower()
+    if method not in KS_COMPLEMENT_METHODS:
+        raise ValueError(f"Unsupported ks_complement_method={method}")
+    return method
 
 
-def _format_multiples(multiples):
-    return f"{multiples:02d}x" if multiples is not None else "all"
+def _ks_complement(real_data, synthetic_data, method=None):
+    method = _resolve_ks_complement_method(method)
+    real_data = pd.to_numeric(pd.Series(real_data).dropna(), errors="coerce").dropna().round(MAX_DECIMALS)
+    synthetic_data = pd.to_numeric(pd.Series(synthetic_data).dropna(), errors="coerce").dropna().round(MAX_DECIMALS)
+    if real_data.empty or synthetic_data.empty:
+        return np.nan
+    return 1.0 - float(ks_2samp(real_data, synthetic_data, method=method).statistic)
+
+
+def _summarize(data_name, scores, metrics, reference_scope):
+    rows = []
+    for metric in metrics:
+        values = [item["score"] for item in scores if item["metric"] == metric]
+        rows.append({
+            "data_name": data_name,
+            "metric": metric,
+            "reference_scope": reference_scope,
+            "mean": float(np.mean(values)) if values else np.nan,
+            "std": float(np.std(values)) if values else np.nan,
+        })
+    return rows
+
+
+def _compute_scope_records(dataset, data_name, reference_scope, multiples=None, test_num=None, ks_complement_method=None):
+    X_syn, X_real, _, _, cat_cols, con_cols, _ = dataset.get_reference_data(
+        reference_scope=reference_scope,
+        multiples_max=multiples,
+        test_num=test_num,
+    )
+
+    fidelity_scores = []
+    diversity_scores = []
+    for col in con_cols:
+        fidelity_scores.append({
+            "data_name": data_name,
+            "name": col,
+            "score": _ks_complement(X_real[col], X_syn[col], ks_complement_method),
+            "metric": "KSComplement",
+        })
+        diversity_scores.append({
+            "data_name": data_name,
+            "name": col,
+            "score": RangeCoverage.compute(X_real[col], X_syn[col]),
+            "metric": "RangeCoverage",
+        })
+    for col in cat_cols:
+        fidelity_scores.append({
+            "data_name": data_name,
+            "name": col,
+            "score": TVComplement.compute(X_real[col], X_syn[col]),
+            "metric": "TVComplement",
+        })
+        diversity_scores.append({
+            "data_name": data_name,
+            "name": col,
+            "score": CategoryCoverage.compute(X_real[col], X_syn[col]),
+            "metric": "CategoryCoverage",
+        })
+
+    return (
+        _summarize(data_name, fidelity_scores, FIDELITY_METRICS, reference_scope),
+        _summarize(data_name, diversity_scores, DIVERSITY_METRICS, reference_scope),
+    )
 
 
 def _get_multiples_list(dataset, use_multiples, multiples_values):
@@ -37,232 +108,91 @@ def _get_multiples_list(dataset, use_multiples, multiples_values):
 
 
 def _get_suffix_tag(args, multiples):
-    if args.multiples:
+    if getattr(args, "multiples", False):
         return f"_{multiples:02d}x"
     return ""
 
 
-def _estimate_total_steps_for_model(args, gen_model):
-    if not args.multiples:
-        return len(args.data_name)
-    if args.multiples_values:
-        return len(args.data_name) * len(args.multiples_values)
-
-    total = 0
-    for data_name in args.data_name:
-        try:
-            dataset = TabularDataset(
-                gen_model, data_name,
-                data_dir=args.data_dir,
-                save_dir=args.save_dir,
-                original_test=False)
-            total += dataset.get_multiples_max()
-        except Exception:
-            total += 1
-    return total
-
-
-def _progress_monitor(progress_queue, reporter, metric_name):
-    while True:
-        item = progress_queue.get()
-        if item is None:
-            break
-        data_name, model_name, multiples = item
-        reporter.step(
-            metric=metric_name,
-            model=model_name,
-            data=data_name,
-            multiples=multiples,
-            stage="score")
-
-
-# --------------------------------------------------------------------------------
-# 1. Fidelity & Diversity 점수 계산
-# --------------------------------------------------------------------------------
-def calcuate_fid_div_score(dataset, data_name, metric_mapping_key, multiples_max=None, test_num=None):
-    """
-    연속형·범주형 컬럼별 fidelityme 점수를 계산해 리스트로 정리한다.
-    """
-    fid_scores, div_scores = [], []
-
-    # TabularDataset으로 로드해 ml_evaluation과 통일성 유지
-    X_train, X_test, _, _, cat_cols, con_cols, target = dataset.get_data(
-        multiples_max=multiples_max, test_num=test_num)
-    # X_train / X_test는 이미 target을 제거한 상태라 바로 사용 가능
-    syn_data = X_train
-    real_data = X_test
-
-    for col_type, (fid_metric, div_metric) in metric_mapping_key.items():
-        cols = con_cols if col_type == 'con_cols' else cat_cols
-        for col in cols:
-            fid_value = fid_metric.compute(real_data[col], syn_data[col])
-            fid_scores.append({ "data_name": data_name, "name": col, "score": fid_value, "metric": fid_metric.__name__ })
-
-            div_value = div_metric.compute(real_data[col], syn_data[col])
-            div_scores.append({ "data_name": data_name, "name": col, "score": div_value, "metric": div_metric.__name__ })
-
-    return fid_scores, div_scores
-
-
-def summarize_scores(data_name, scores, metrics):
-    """
-    메트릭별 평균 및 표준편차를 계산해 요약 레코드 리스트를 만든다.
-    """
-    records = []
-    for metric in metrics:
-        values = [item['score'] for item in scores if item['metric'] == metric]
-        mean   = float(np.mean(values)) if len(values) else np.nan
-        std    = float(np.std(values)) if len(values) else np.nan
-        records.append({ "data_name": data_name, "metric": metric, "mean": mean, "std": std })
-    return records
-
-
-def get_fid_div_records(data_name, fid_scores, div_scores):
-    """
-    fidelity·diversity 점수를 메트릭별 요약 레코드로 묶어 반환한다.
-    """
-    fid_record = summarize_scores(data_name, fid_scores, ["KSComplement", "TVComplement"])
-    div_record = summarize_scores(data_name, div_scores, ["RangeCoverage", "CategoryCoverage"])
-
-    return fid_record, div_record
-
-
-def _compute_fid_div_for_dataset(
+def _compute_records_for_dataset(
+    args,
     data_name,
     gen_model,
-    data_dir,
-    save_dir,
-    use_multiples,
-    multiples_values,
-    test_num,
-    progress_queue=None,
-    reporter=None,
+    multiples=None,
+    synthetic_path=None,
+    synthetic_frame=None,
 ):
     dataset = TabularDataset(
-        gen_model, data_name,
-        data_dir=data_dir,
-        save_dir=save_dir,
-        original_test=False)
-    multiples_list = _get_multiples_list(dataset, use_multiples, multiples_values)
-
-    fid_results_by_multiples = {}
-    div_results_by_multiples = {}
-
-    for multiples in multiples_list:
-        fid_scores, div_scores = calcuate_fid_div_score(
-            dataset, data_name, METRIC_MAPPING_KEY,
-            multiples_max=multiples if use_multiples else None,
-            test_num=test_num)
-        fid_records, div_records = get_fid_div_records(data_name, fid_scores, div_scores)
-
-        fid_results_by_multiples.setdefault(multiples, []).extend(fid_records)
-        div_results_by_multiples.setdefault(multiples, []).extend(div_records)
-
-        if progress_queue is not None:
-            progress_queue.put((data_name, gen_model, multiples))
-        elif reporter is not None:
-            reporter.step(
-                metric="SDMetrics",
-                model=gen_model,
-                data=data_name,
-                multiples=multiples,
-                stage="score")
-
-    return data_name, fid_results_by_multiples, div_results_by_multiples
+        gen_model,
+        data_name,
+        data_dir=args.data_dir,
+        save_dir=getattr(args, "save_dir", "./output"),
+        original_test=False,
+        synthetic_path=synthetic_path,
+        synthetic_frame=synthetic_frame,
+    )
+    test_num = args.test_num if getattr(args, "test", False) else None
+    fid_records = []
+    div_records = []
+    for scope in REFERENCE_SCOPES:
+        scope_fid, scope_div = _compute_scope_records(
+            dataset,
+            data_name,
+            scope,
+            multiples=multiples if getattr(args, "multiples", False) else None,
+            test_num=test_num,
+            ks_complement_method=_resolve_ks_complement_method(args),
+        )
+        fid_records.extend(scope_fid)
+        div_records.extend(scope_div)
+    return fid_records, div_records
 
 
-def compute_fid_div_for_dataset(args):
-    return _compute_fid_div_for_dataset(*args)
+def _write_records(output_dir, variant_slug, multiples, fid_records, div_records, suffix_tag):
+    fid_dir = os.path.join(output_dir, "Fidelity")
+    div_dir = os.path.join(output_dir, "Diversity")
+    os.makedirs(fid_dir, exist_ok=True)
+    os.makedirs(div_dir, exist_ok=True)
+    pd.DataFrame(
+        fid_records,
+        columns=["data_name", "metric", "reference_scope", "mean", "std"],
+    ).to_csv(os.path.join(fid_dir, f"{variant_slug}_fidelity{suffix_tag}.csv"), index=False)
+    pd.DataFrame(
+        div_records,
+        columns=["data_name", "metric", "reference_scope", "mean", "std"],
+    ).to_csv(os.path.join(div_dir, f"{variant_slug}_diversity{suffix_tag}.csv"), index=False)
 
 
-# --------------------------------------------------------------------------------
-# 2. 평가 실행
-# --------------------------------------------------------------------------------
-def evaluate_fidelity_diversity(args, reporter=None):
-    """
-    Fidelity와 Diversity 지표를 계산해 모델별 CSV 파일로 저장한다.
-    """
+def evaluate_sdmetrics_single(args, data_name, variant_slug, synthetic_path, output_dir, reporter=None, synthetic_frame=None):
     reporter = reporter or NullProgressReporter(verbose=getattr(args, "verbose_eval", False))
+    fid_records, div_records = _compute_records_for_dataset(
+        args,
+        data_name,
+        variant_slug,
+        multiples=None,
+        synthetic_path=synthetic_path,
+        synthetic_frame=synthetic_frame,
+    )
+    _write_records(output_dir, variant_slug, None, fid_records, div_records, "")
+    reporter.ok(f"[OK] metric=SDMetrics model={variant_slug} data={data_name}")
 
-    args.fid_dir = os.path.join(args.log_dir, "Fidelity");  os.makedirs(args.fid_dir, exist_ok=True)
-    args.div_dir = os.path.join(args.log_dir, "Diversity"); os.makedirs(args.div_dir, exist_ok=True)
-    worker_limit = getattr(args, "num_workers", None)
+
+def evaluate_fidelity_diversity(args, reporter=None):
+    reporter = reporter or NullProgressReporter(verbose=getattr(args, "verbose_eval", False))
+    output_dir = args.log_dir
 
     for gen_model in args.model_name:
-        fid_results_by_multiples = {}
-        div_results_by_multiples = {}
+        results_by_multiples = {}
+        for data_name in args.data_name:
+            dataset = TabularDataset(gen_model, data_name, data_dir=args.data_dir, save_dir=args.save_dir, original_test=False)
+            multiples_list = _get_multiples_list(dataset, getattr(args, "multiples", False), getattr(args, "multiples_values", None))
+            reporter.add_total(len(multiples_list))
+            for multiples in multiples_list:
+                fid_records, div_records = _compute_records_for_dataset(args, data_name, gen_model, multiples=multiples)
+                bucket = results_by_multiples.setdefault(multiples, {"fid": [], "div": []})
+                bucket["fid"].extend(fid_records)
+                bucket["div"].extend(div_records)
+                reporter.step(metric="SDMetrics", model=gen_model, data=data_name, multiples=multiples, stage="score")
 
-        total_steps = _estimate_total_steps_for_model(args, gen_model)
-        reporter.add_total(total_steps)
-
-        test_num = args.test_num if args.test else None
-        use_parallel = (
-            args.multiprocessing
-            and (len(args.data_name) > 1)
-            and (os.cpu_count() or 1) > 1
-        )
-
-        if use_parallel:
-            ctx = mp.get_context("spawn")
-            worker_count = min(len(args.data_name), os.cpu_count() or 1)
-            if worker_limit is not None:
-                worker_count = min(worker_count, worker_limit)
-
-            with ctx.Manager() as manager:
-                progress_queue = manager.Queue()
-                monitor = threading.Thread(
-                    target=_progress_monitor,
-                    args=(progress_queue, reporter, "SDMetrics"),
-                    daemon=True,
-                )
-                monitor.start()
-
-                try:
-                    args_iter = [
-                        (data_name, gen_model, args.data_dir, args.save_dir,
-                         args.multiples, args.multiples_values, test_num, progress_queue, None)
-                        for data_name in args.data_name
-                    ]
-                    with ctx.Pool(processes=worker_count) as pool:
-                        for data_name, fid_results, div_results in pool.imap_unordered(compute_fid_div_for_dataset, args_iter):
-                            for multiples, records in fid_results.items():
-                                fid_results_by_multiples.setdefault(multiples, []).extend(records)
-                            for multiples, records in div_results.items():
-                                div_results_by_multiples.setdefault(multiples, []).extend(records)
-                finally:
-                    progress_queue.put(None)
-                    monitor.join()
-
-        else:
-            for data_name in args.data_name:
-                data_name, fid_results, div_results = _compute_fid_div_for_dataset(
-                    data_name, gen_model, args.data_dir, args.save_dir,
-                    args.multiples, args.multiples_values, test_num,
-                    progress_queue=None, reporter=reporter,
-                )
-                for multiples, records in fid_results.items():
-                    fid_results_by_multiples.setdefault(multiples, []).extend(records)
-                for multiples, records in div_results.items():
-                    div_results_by_multiples.setdefault(multiples, []).extend(records)
-
-        for multiples, fid_results in fid_results_by_multiples.items():
-            div_results = div_results_by_multiples.get(multiples, [])
-
-            fid_df = pd.DataFrame(fid_results, columns=["data_name", "metric", "mean", "std"])
-            div_df = pd.DataFrame(div_results, columns=["data_name", "metric", "mean", "std"])
-
-            fid_dir = args.fid_dir
-            div_dir = args.div_dir
-            os.makedirs(fid_dir, exist_ok=True)
-            os.makedirs(div_dir, exist_ok=True)
-
-            suffix_tag = _get_suffix_tag(args, multiples)
-            fid_path = os.path.join(fid_dir, f"{gen_model}_fidelity{suffix_tag}.csv")
-            div_path = os.path.join(div_dir, f"{gen_model}_diversity{suffix_tag}.csv")
-
-            fid_df.to_csv(fid_path, index=False)
-            div_df.to_csv(div_path, index=False)
-
-            reporter.info(f"[SDMetrics] 저장 완료: fidelity={fid_path}, diversity={div_path}", verbose_only=True)
-
+        for multiples, records in results_by_multiples.items():
+            _write_records(output_dir, gen_model, multiples, records["fid"], records["div"], _get_suffix_tag(args, multiples))
         reporter.ok(f"[OK] metric=SDMetrics model={gen_model} saved")

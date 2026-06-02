@@ -213,6 +213,7 @@ python main.py generation \
   --data-name <dataset_name> \
   --data-dir <data_path> \
   --config ./config/generation/tadgan.toml \
+  --eval-model-config-dir ./config/prediction \
   --verbose-model
 ```
 

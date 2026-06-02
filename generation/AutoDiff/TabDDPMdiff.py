@@ -382,8 +382,9 @@ class MLPDiffusion(nn.Module):
         return self.mlp(x)
 
 
-def train_diffusion(latent_features, T, eps, sigma, lr, \
-                    num_batches_per_epoch, maximum_learning_rate, weight_decay, n_epochs, batch_size, show_progress=True):
+def train_diffusion(latent_features, T, eps, sigma, lr, num_batches_per_epoch,
+                    maximum_learning_rate, weight_decay, n_epochs, batch_size,
+                    show_progress=True, candidate_callback=None):
     
     rtdl_params={
         'd_in': latent_features.shape[1],
@@ -423,6 +424,8 @@ def train_diffusion(latent_features, T, eps, sigma, lr, \
       losses.append(loss.item())
       if show_progress:
           tqdm_epoch.set_description('Diff Average Loss: {:5f}'.format(loss.item()))
+      if candidate_callback is not None:
+          candidate_callback(epoch + 1, ScoreNet.state_dict())
         
     return ScoreNet
 

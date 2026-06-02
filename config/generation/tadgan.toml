@@ -8,7 +8,7 @@ bin_threshold = 0.5
 ## - "prior": 원본 데이터 전체 target 분포를 따라 생성
 ## - "balanced": class 개수를 균등하게 맞춰 생성
 ## - 학습 minibatch sampler와는 별개 옵션
-sampling_strategy = "balanced"
+sampling_strategy = "prior"
 
 [evaluation]
 ## KSComplement 내부 SciPy ks_2samp p-value 계산 방식
@@ -19,7 +19,7 @@ ks_complement_method = "asymp"
 [train]
 epochs = 10000
 lr = 1e-3
-## TADGAN은 stage 3 추가 regularizer가 없으므로
+## TADGAN (w/o L_align, w/o mode seeking)은 stage 3 추가 regularizer가 없으므로
 ## total epochs와 무관하게 stage boundary를 고정함
 stage1_end_epoch = 150
 stage2_end_epoch = 500
