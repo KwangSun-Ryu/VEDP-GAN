@@ -1,4 +1,4 @@
-name: TADGAN
+name: VEDP-GAN
 channels:
   - defaults
 dependencies:

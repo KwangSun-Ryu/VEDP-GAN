@@ -8,7 +8,7 @@ Original file is located at
 """
 
 # =========================================
-# Tabular TADGAN (Latent Diffusion + GAN)
+# Tabular VEDP_GAN (Latent Diffusion + GAN)
 # - Decoder는 "비조건부"(y 미사용)
 # - Discriminator/Generator만 y-conditional (AC-GAN 스타일)
 # - z0 재구성(MSE/BCE), KL 정규화 포함
@@ -209,7 +209,7 @@ class DecoderMixed(nn.Module):
             out["x_hat_bin_logit"] = self.hb(h)
         return out
 
-class TADGANMixed(nn.Module):
+class VEDP_GANMixed(nn.Module):
     def __init__(self, cont_dim, bin_dim, latent_dim, noise_dim, timesteps=1000):
         super().__init__()
         in_dim = cont_dim + bin_dim
@@ -229,7 +229,7 @@ def kl_loss(mu, logvar):
     return 0.5 * torch.mean(torch.exp(logvar) + mu**2 - 1.0 - logvar)
 
 C, B = X_cont_np.shape[1], X_bin_np.shape[1]
-model = TADGANMixed(C, B, latent_dim=LATENT_DIM, noise_dim=NOISE_DIM, timesteps=TIMESTEPS).to(device)
+model = VEDP_GANMixed(C, B, latent_dim=LATENT_DIM, noise_dim=NOISE_DIM, timesteps=TIMESTEPS).to(device)
 
 # ===== ZT 버전 학습 루틴 (Decoder는 비조건부) =====
 def _train_model_zt(

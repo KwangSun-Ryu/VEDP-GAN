@@ -1,4 +1,4 @@
-"""TADGAN 데이터 로더."""
+"""VEDP_GAN 데이터 로더."""
 
 import json
 import math
@@ -164,7 +164,7 @@ def build_training_batch_sampler(loaders, config, train_loader=None):
     return (sampler if sampler.enabled else None), sampler.info
 
 
-class TADGANTabularDataset(Dataset):
+class VEDP_GANTabularDataset(Dataset):
     def __init__(self, x_con, x_bin, y):
         self.x_con = torch.tensor(x_con, dtype=torch.float32)
         self.x_cont = self.x_con
@@ -383,7 +383,7 @@ def make_dataloader(args):
 
     x_con_np, x_bin_np, scaler, oh_info, meta = _prepare_arrays(train_df, con_cols, binary_cols, cat_cols)
 
-    dataset = TADGANTabularDataset(x_con_np, x_bin_np, label_codes)
+    dataset = VEDP_GANTabularDataset(x_con_np, x_bin_np, label_codes)
     loader_kwargs = {
         "batch_size": batch_size,
         "shuffle": True,

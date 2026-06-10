@@ -22,7 +22,7 @@ MODEL_CONFIG_FILES = {
     "CoDi": "codi.toml",
     "AutoDiff": "autodiff.toml",
     "TTGAN": "ttgan.toml",
-    "TADGAN": "tadgan.toml",
+    "VEDP-GAN": "vedp_gan.toml",
 }
 
 FIDELITY_SCOPE = "full"

@@ -13,7 +13,7 @@ from ablation_study.scripts.utils import (
     normalize_bounded_head_config,
     summarize_model_config,
 )
-from generation.TADGAN.model import DecoderMixed, Encoder, MLPProjector, ResidualMLPBlock
+from generation.VEDP_GAN.model import DecoderMixed, Encoder, MLPProjector, ResidualMLPBlock
 
 
 class DiffusionOnlyConfig:

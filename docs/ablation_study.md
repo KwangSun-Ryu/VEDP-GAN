@@ -1,6 +1,6 @@
 # Ablation Study CLI
 
-`ablation`은 공개용 `TADGAN`을 기준으로 generator comparison과 blending ablation을 실행합니다.
+`ablation`은 공개용 `VEDP-GAN`을 기준으로 generator comparison과 blending ablation을 실행합니다.
 
 ## Generator comparison
 
@@ -16,12 +16,12 @@ python main.py ablation \
   --test
 ```
 
-## TADGAN baseline만 실행
+## VEDP-GAN baseline만 실행
 
 ```bash
 python main.py ablation \
   --experiment generator_comparison \
-  --variant-slug tadgan \
+  --variant-slug vedp_gan \
   --data-name CVA \
   --data-dir ../data/ver_06 \
   --config-dir ./config/ablation \
@@ -45,4 +45,4 @@ python main.py ablation \
   --test
 ```
 
-`blend_alpha_05`는 `generator_comparison/CVA/tadgan` 결과와 설정이 같으면 재학습하지 않고 해당 결과를 재사용합니다.
+`blend_alpha_05`는 `generator_comparison/CVA/vedp_gan` 결과와 설정이 같으면 재학습하지 않고 해당 결과를 재사용합니다.

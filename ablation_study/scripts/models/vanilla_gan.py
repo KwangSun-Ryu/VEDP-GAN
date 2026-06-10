@@ -12,7 +12,7 @@ from ablation_study.scripts.utils import (
     normalize_bounded_head_config,
     summarize_model_config,
 )
-from generation.TADGAN.model import MLPProjector, ResidualMLPBlock, _make_linear
+from generation.VEDP_GAN.model import MLPProjector, ResidualMLPBlock, _make_linear
 
 
 class VanillaGANConfig:

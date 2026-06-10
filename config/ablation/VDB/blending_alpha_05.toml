@@ -1,4 +1,4 @@
-## Stage 3 regularizer 제거 ablation용 residual TADGAN 설정
+## Stage 3 regularizer 제거 ablation용 residual VEDP-GAN 설정
 ## - latent alignment와 mode seeking을 모두 끄므로 stage 3 objective는 stage 2와 동일함
 [runtime]
 batch_size = 256
@@ -19,7 +19,7 @@ ks_complement_method = "asymp"
 [train]
 epochs = 6600
 lr = 1e-3
-## TADGAN은 stage 3 추가 regularizer가 없으므로
+## VEDP-GAN은 stage 3 추가 regularizer가 없으므로
 ## total epochs와 무관하게 stage boundary를 고정함
 stage1_end_epoch = 150
 stage2_end_epoch = 500

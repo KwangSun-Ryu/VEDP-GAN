@@ -1,12 +1,12 @@
-"""TADGAN sampling loop for ablation experiments."""
+"""`ave.py` 의미를 유지하는 residual VEDP_GAN 샘플링."""
 
 import os
 
 import pandas as pd
 import torch
 
-from generation.TADGAN.model import TADGAN, TADGANConfig
-from ablation_study.scripts.utils import (
+from .model import VEDP_GAN, VEDP_GANConfig, VERSION_MAP
+from .utils import (
     build_synthetic_path,
     clip_continuous_dataframe_to_support,
     decode_mixed_outputs,
@@ -18,12 +18,6 @@ from ablation_study.scripts.utils import (
 )
 
 
-VERSION_MAP = {
-    "TADGAN": "ave",
-    "TADGAN_WO_DIFFUSION": "z0",
-}
-
-
 def _resolve_device(args):
     if hasattr(args, "device"):
         return args.device
@@ -33,11 +27,11 @@ def _resolve_device(args):
 def _resolve_version_key(args, meta):
     if meta is not None and meta.get("version_key") in {"ave", "z0", "zt"}:
         return meta["version_key"]
-    return VERSION_MAP.get(getattr(args, "model_name", "TADGAN"), "ave")
+    return VERSION_MAP.get(getattr(args, "model_name", "VEDP-GAN"), "ave")
 
 
 def _build_model_from_checkpoint(ckpt, device):
-    config = TADGANConfig()
+    config = VEDP_GANConfig()
     config_dict = normalize_bounded_head_config(dict(ckpt.get("config", {})))
     for key, value in config_dict.items():
         if hasattr(config, key):
@@ -47,7 +41,7 @@ def _build_model_from_checkpoint(ckpt, device):
     con_cols = meta.get("con_cols", meta.get("cont_cols", []))
     con_dim = len(con_cols)
     bin_dim = len(meta["bin_cols"])
-    model = TADGAN(con_dim, bin_dim, config, ckpt["num_classes"]).to(device)
+    model = VEDP_GAN(con_dim, bin_dim, config, ckpt["num_classes"]).to(device)
     model.load_state_dict(ckpt["model_state"])
     model.set_continuous_bounds(meta.get("con_min_scaled", []), meta.get("con_max_scaled", []))
     ema_state = ckpt.get("ema_generator_state")
@@ -97,14 +91,26 @@ def _synthesize(model, n_samples, label_idx, version_key, device):
         return model.decoder(z_fake)
 
 
-def sample(args, loaders, run_dirs, ckpt_path=None, model=None, session=None, return_frame=False, reporter=None, verbose=True):
+def sample(
+    args,
+    loaders,
+    run_dirs,
+    ckpt_path=None,
+    model=None,
+    session=None,
+    return_frame=False,
+    reporter=None,
+    verbose=True,
+    save=True,
+    output_path=None,
+):
     if args.model_name not in VERSION_MAP:
-        raise ValueError("지원하지 않는 TADGAN 버전이다.")
+        raise ValueError("지원하지 않는 VEDP-GAN 버전이다.")
 
     device = _resolve_device(args)
     config_flat = normalize_bounded_head_config(flatten_config_dict(getattr(args, "config_dict", {}) or {}))
     meta_info = {
-        "model_kind": "tadgan",
+        "model_kind": "vedp_gan",
         "decoder_outputs_bounded": bool(config_flat.get("use_bounded_head", False)),
         "con_cols": loaders.meta["con_cols"],
         "bin_cols": loaders.meta["bin_cols"],
@@ -132,7 +138,7 @@ def sample(args, loaders, run_dirs, ckpt_path=None, model=None, session=None, re
         model, _, meta, ckpt = _load_session_checkpoint(session, ckpt_path, device)
         scaler = ckpt.get("scaler", scaler)
         version_key = _resolve_version_key(args, meta)
-        meta_info["model_kind"] = meta.get("model_kind", "tadgan")
+        meta_info["model_kind"] = meta.get("model_kind", "vedp_gan")
         meta_info["decoder_outputs_bounded"] = meta.get("decoder_outputs_bounded", bool(meta.get("use_bounded_head", False)))
         meta_info["con_cols"] = meta.get("con_cols", meta.get("cont_cols", []))
         meta_info["bin_cols"] = meta["bin_cols"]
@@ -209,16 +215,19 @@ def sample(args, loaders, run_dirs, ckpt_path=None, model=None, session=None, re
         synthetic = pd.concat(frames, ignore_index=True)
         synthetic = reorder_columns(synthetic, list(loaders.original_df.columns))
         synthetic = clip_continuous_dataframe_to_support(synthetic, meta_info)
-        output_path = build_synthetic_path(run_dirs, args.data_name, args.variant_slug)
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        synthetic.to_csv(output_path, index=False)
+        if save:
+            output_path = output_path or build_synthetic_path(run_dirs, args.data_name, args.variant_slug)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            synthetic.to_csv(output_path, index=False)
+        else:
+            output_path = None
     finally:
         if detail_bar is not None:
             detail_bar.close()
         if epoch_bar is not None:
             epoch_bar.close()
 
-    if reporter is not None:
+    if reporter is not None and output_path is not None:
         reporter.ok(f"[OK] variant={args.variant_slug} data={args.data_name} synthetic={output_path}")
     if session is not None:
         session["model"] = model

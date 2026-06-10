@@ -49,9 +49,9 @@ class Generator():
         self.config_path = config_path
         self.eval_model_config_dir = eval_model_config_dir
         self.auto_trained = None
-        self.tadgan_model = None
-        self.tadgan_ckpt_path = None
-        self.tadgan_run_dirs = None
+        self.vedp_gan_model = None
+        self.vedp_gan_ckpt_path = None
+        self.vedp_gan_run_dirs = None
         self.target = json.loads(Path(os.path.join(self.data_dir, 'datasets_info.json')).read_text(encoding='utf-8'))[data_name]['target']
 
         os.makedirs(self.model_exp_dir, exist_ok=True)
@@ -85,25 +85,25 @@ class Generator():
             run_kwargs['stderr'] = subprocess.DEVNULL
         subprocess.run(command, **run_kwargs)
 
-    def _build_tadgan_context(self):
-        from generation.TADGAN.scripts import utils as tadgan_utils
+    def _build_vedp_gan_context(self):
+        from generation.VEDP_GAN.scripts import utils as vedp_gan_utils
 
-        if self.model_name != "TADGAN":
-            raise ValueError("TADGAN context is only available for model_name='TADGAN'.")
+        if self.model_name != "VEDP-GAN":
+            raise ValueError("VEDP-GAN context is only available for model_name='VEDP-GAN'.")
         if not torch.cuda.is_available():
-            raise RuntimeError("Patched TADGAN must run with CUDA in the WSL TADGAN environment.")
+            raise RuntimeError("VEDP-GAN must run with CUDA in the configured environment.")
 
         project_root = Path(__file__).resolve().parents[1]
-        config_path = Path(self.config_path) if self.config_path else project_root / "config" / "generation" / "tadgan.toml"
+        config_path = Path(self.config_path) if self.config_path else project_root / "config" / "generation" / "vedp_gan.toml"
         if not config_path.is_absolute():
             config_path = Path.cwd() / config_path
         if not config_path.exists():
-            raise FileNotFoundError(f"TADGAN generation config가 없습니다: {config_path}")
+            raise FileNotFoundError(f"VEDP-GAN generation config가 없습니다: {config_path}")
         with open(config_path, "rb") as file:
             config_dict = tomllib.load(file)
-        config_flat = tadgan_utils.flatten_config_dict(config_dict)
+        config_flat = vedp_gan_utils.flatten_config_dict(config_dict)
         if config_flat.get("enable_best_on_test_selection") is not True:
-            raise ValueError("TADGAN 일반 generation은 checkpoint_selection.enable_best_on_test_selection=true가 필수입니다.")
+            raise ValueError("VEDP-GAN 일반 generation은 checkpoint_selection.enable_best_on_test_selection=true가 필수입니다.")
 
         base_dir = os.path.join(self.model_exp_dir, self.data_name)
         run_dirs = {
@@ -120,9 +120,9 @@ class Generator():
             experiment="generation",
             data_name=self.data_name,
             data_dir=self.data_dir,
-            model_name="TADGAN",
-            variant_slug="TADGAN",
-            display_name="TADGAN",
+            model_name="VEDP-GAN",
+            variant_slug="VEDP-GAN",
+            display_name="VEDP-GAN",
             config_path=str(config_path),
             config_dict=config_dict,
             device_train="cuda",
@@ -587,26 +587,23 @@ class Generator():
             
             return None
 
-        if self.model_name == 'TADGAN':
-            from generation.TADGAN.scripts import train as tadgan_train
-            from generation.TADGAN.scripts.selection import run_best_selection
+        if self.model_name == 'VEDP-GAN':
+            from generation.VEDP_GAN.scripts import train as vedp_gan_train
+            from generation.VEDP_GAN.scripts.selection import run_best_selection
 
-            tadgan_args, run_dirs = self._build_tadgan_context()
-            self.tadgan_run_dirs = run_dirs
+            vedp_gan_args, run_dirs = self._build_vedp_gan_context()
+            self.vedp_gan_run_dirs = run_dirs
 
-            self.tadgan_model, self.tadgan_ckpt_path = tadgan_train.train(
-                tadgan_args,
+            self.vedp_gan_model, self.vedp_gan_ckpt_path = vedp_gan_train.train(
+                vedp_gan_args,
                 self.data_loader,
                 run_dirs,
                 reporter=None,
                 verbose=verbose,
             )
-            self.tadgan_ckpt_path = run_best_selection(tadgan_args, self.data_loader, run_dirs)
-            self.tadgan_model = None
-            return self.tadgan_model
-
-        if self.model_name in {'TADGAN_ver1', 'TADGAN_ver2', 'TADGAN_ver3'}:
-            raise ValueError("TADGAN_ver1/2/3 are legacy names. Use TADGAN.")
+            self.vedp_gan_ckpt_path = run_best_selection(vedp_gan_args, self.data_loader, run_dirs)
+            self.vedp_gan_model = None
+            return self.vedp_gan_model
 
     def _load_stasy_config(self):
         config_path = os.path.join(
@@ -824,20 +821,20 @@ class Generator():
                 print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
             return synthetic_data
 
-        if self.model_name == 'TADGAN':
-            from generation.TADGAN.scripts import sample as tadgan_sample
-            from generation.TADGAN.scripts import utils as tadgan_utils
+        if self.model_name == 'VEDP-GAN':
+            from generation.VEDP_GAN.scripts import sample as vedp_gan_sample
+            from generation.VEDP_GAN.scripts import utils as vedp_gan_utils
 
-            tadgan_args, run_dirs = self._build_tadgan_context()
-            self.tadgan_run_dirs = run_dirs
+            vedp_gan_args, run_dirs = self._build_vedp_gan_context()
+            self.vedp_gan_run_dirs = run_dirs
             ckpt_path = self._require_path(
-                self.tadgan_ckpt_path or tadgan_utils.build_checkpoint_path(
-                    run_dirs, self.data_name, "TADGAN", "best_on_test"),
-                "TADGAN best_on_test checkpoint",
+                self.vedp_gan_ckpt_path or vedp_gan_utils.build_checkpoint_path(
+                    run_dirs, self.data_name, "VEDP-GAN", "best_on_test"),
+                "VEDP-GAN best_on_test checkpoint",
             )
 
-            _, synthetic_data = tadgan_sample.sample(
-                tadgan_args,
+            _, synthetic_data = vedp_gan_sample.sample(
+                vedp_gan_args,
                 self.data_loader,
                 run_dirs,
                 ckpt_path=ckpt_path,
@@ -851,8 +848,5 @@ class Generator():
             if save and verbose:
                 print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
             return synthetic_data
-
-        if self.model_name in {'TADGAN_ver1', 'TADGAN_ver2', 'TADGAN_ver3'}:
-            raise ValueError("TADGAN_ver1/2/3 are legacy names. Use TADGAN.")
 
         raise ValueError(f"지원되지 않는 모델입니다: {self.model_name}")

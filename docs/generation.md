@@ -1,17 +1,17 @@
 # Generation CLI
 
-`generation`은 지정한 생성 모델을 학습하고 합성 데이터를 생성합니다. 공개용 TADGAN은 `--model-name TADGAN`으로 실행합니다.
+`generation`은 지정한 생성 모델을 학습하고 합성 데이터를 생성합니다. 공개용 VEDP-GAN은 `--model-name VEDP-GAN`으로 실행합니다.
 
-## TADGAN 학습 및 생성
+## VEDP-GAN 학습 및 생성
 
 ```bash
 python main.py generation \
-  --model-name TADGAN \
+  --model-name VEDP-GAN \
   --data-name CVA \
   --data-dir ../data/ver_06 \
   --exp-dir ./exp/generation \
   --save-dir ./output \
-  --config ./config/generation/tadgan.toml \
+  --config ./config/generation/vedp_gan.toml \
   --eval-model-config-dir ./config/prediction \
   --verbose-model
 ```
@@ -20,12 +20,12 @@ python main.py generation \
 
 ```bash
 python main.py generation \
-  --model-name TADGAN \
+  --model-name VEDP-GAN \
   --data-name CVA HFZ SP \
   --data-dir ../data/ver_06 \
   --exp-dir ./exp/generation \
   --save-dir ./output \
-  --config ./config/generation/tadgan.toml \
+  --config ./config/generation/vedp_gan.toml \
   --eval-model-config-dir ./config/prediction
 ```
 
@@ -33,7 +33,7 @@ python main.py generation \
 
 ```bash
 python main.py generation \
-  --model-name CTGAN TADGAN \
+  --model-name CTGAN VEDP-GAN \
   --data-name CVA \
   --data-dir ../data/ver_06 \
   --exp-dir ./exp/generation \

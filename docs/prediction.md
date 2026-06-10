@@ -7,7 +7,7 @@
 ```bash
 python main.py prediction \
   --metric-name ML \
-  --model-name TADGAN \
+  --model-name VEDP-GAN \
   --data-name CVA \
   --data-dir ../data/ver_06 \
   --save-dir ./output \
@@ -22,7 +22,7 @@ python main.py prediction \
 
 ```bash
 python main.py prediction \
-  --model-name TADGAN \
+  --model-name VEDP-GAN \
   --data-name CVA \
   --data-dir ../data/ver_06 \
   --save-dir ./output \
@@ -36,7 +36,7 @@ python main.py prediction \
 ```bash
 python main.py prediction \
   --metric-name ML SDMetrics DCR \
-  --model-name CTGAN TADGAN \
+  --model-name CTGAN VEDP-GAN \
   --data-name CVA HFZ \
   --data-dir ../data/ver_06 \
   --save-dir ./output \

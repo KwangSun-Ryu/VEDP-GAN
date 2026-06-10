@@ -1,6 +1,6 @@
-# TADGAN
+# VEDP-GAN
 
-Temporary research code structure for TADGAN.
+Research code structure for VEDP-GAN.
 
 This repository contains the tabular data generation model, downstream prediction
 evaluation, and ablation study pipeline used for the experiments.
@@ -8,17 +8,17 @@ evaluation, and ablation study pipeline used for the experiments.
 ## Repository Structure
 
 ```text
-TADGAN/
+VEDP-GAN/
 ├── main.py
 ├── generation/
-│   ├── TADGAN/              # canonical TADGAN architecture
+│   ├── VEDP_GAN/              # canonical VEDP-GAN architecture
 │   ├── TabDDPM/
 │   ├── STaSy/
 │   ├── CoDi/
 │   ├── AutoDiff/
 │   └── TTGAN/
 ├── prediction/              # downstream ML and statistical evaluation
-├── ablation_study/          # ablation runners built on generation/TADGAN
+├── ablation_study/          # ablation runners built on generation/VEDP_GAN
 ├── config/
 │   ├── generation/
 │   ├── prediction/
@@ -28,7 +28,7 @@ TADGAN/
 
 ## Model Overview
 
-TADGAN is a tabular data generation model that combines a variational
+VEDP-GAN is a tabular data generation model that combines a variational
 encoder-decoder, latent-space diffusion, and adversarial generation.
 
 The model first maps mixed tabular features into a continuous latent space with
@@ -49,11 +49,11 @@ The core modules are:
 - `Discriminator`: distinguishes real and generated latent variables and
   predicts the target class.
 - `DecoderMixed`: reconstructs continuous features and discrete feature groups.
-- `TADGAN`: combines the modules above into the final generator architecture.
+- `VEDP-GAN`: combines the modules above into the final generator architecture.
 
 ## Losses
 
-TADGAN uses reconstruction, KL regularization, adversarial, and auxiliary
+VEDP-GAN uses reconstruction, KL regularization, adversarial, and auxiliary
 classification losses.
 
 The reconstruction loss is computed from the decoder output:
@@ -85,7 +85,7 @@ The generator adversarial loss is:
 L_G = BCE(D_adv(z_fake), 1) + w_cls * CE(D_cls(z_fake), y)
 ```
 
-For the public TADGAN configuration, the optimized generator-side objective is:
+For the public VEDP-GAN configuration, the optimized generator-side objective is:
 
 ```text
 L_total = w_rec * L_rec + w_kl * L_KL + L_G
@@ -101,7 +101,7 @@ The default setting uses `alpha = 0.5`.
 
 ## Stage-wise Training
 
-The current public TADGAN setup uses two effective training objectives.
+The current public VEDP-GAN setup uses two effective training objectives.
 With the default config, Stage 1 ends at epoch `150`. Stage 2 starts after that
 and remains the effective objective for the rest of training.
 
@@ -134,7 +134,7 @@ enabled in the config.
 ### Stage 3 Compatibility
 
 The training code still contains a stage-3 branch for compatibility with older
-regularization experiments. In the public TADGAN configuration, stage-3-only
+regularization experiments. In the public VEDP-GAN configuration, stage-3-only
 terms are disabled:
 
 ```text
@@ -145,7 +145,7 @@ stage3_mode_seeking_scale = 0.0
 ```
 
 Therefore, after the warm-up stage, the effective objective remains the Stage 2
-objective. In other words, this repository treats TADGAN as a two-objective
+objective. In other words, this repository treats VEDP-GAN as a two-objective
 training procedure: reconstruction warm-up followed by latent adversarial
 generation. The default config keeps `stage2_end_epoch = 500` only for
 checkpoint-selection compatibility; it does not introduce an additional loss
@@ -157,14 +157,14 @@ The codebase is designed for PyTorch 2.x and GPU-enabled tabular ML evaluation.
 Create a conda environment from the provided environment file:
 
 ```bash
-conda env create -f TADGAN.yml
-conda activate TADGAN
+conda env create -f VEDP-GAN.yml
+conda activate VEDP-GAN
 ```
 
 To use a custom environment name, create the environment with `-n <env_name>`:
 
 ```bash
-conda env create -n <env_name> -f TADGAN.yml
+conda env create -n <env_name> -f VEDP-GAN.yml
 conda activate <env_name>
 ```
 
@@ -205,34 +205,71 @@ python main.py ablation --help
 
 ## Example Commands
 
-Train and sample with TADGAN:
+### Training and Sampling
+
+Train VEDP-GAN on GPU, then generate 10x synthetic samples from the selected
+best checkpoint.
 
 ```bash
 python main.py generation \
-  --model-name TADGAN \
+  --model-name VEDP-GAN \
   --data-name <dataset_name> \
   --data-dir <data_path> \
-  --config ./config/generation/tadgan.toml \
+  --exp-dir ./exp/generation \
+  --save-dir ./output \
+  --config ./config/generation/vedp_gan.toml \
+  --eval-model-config-dir ./config/prediction \
+  --verbose-model
+
+python -m generation.inference \
+  --model-name VEDP-GAN \
+  --data-name <dataset_name> \
+  --data-dir <data_path> \
+  --exp-dir ./exp/generation \
+  --save-dir ./output \
+  --config ./config/generation/vedp_gan.toml \
+  --eval-model-config-dir ./config/prediction \
+  --multiplier 10 \
+  --verbose-model
+```
+
+To train and sample all generation models for one dataset, list all model names
+or omit `--model-name`.
+
+```bash
+python main.py generation \
+  --model-name TabDDPM CTGAN STaSy CoDi AutoDiff TTGAN VEDP-GAN \
+  --data-name <dataset_name> \
+  --data-dir <data_path> \
+  --exp-dir ./exp/generation \
+  --save-dir ./output \
   --eval-model-config-dir ./config/prediction \
   --verbose-model
 ```
 
-Evaluate generated data with GPU ML models:
+To run every generation model on every dataset in `datasets_info.json`, omit
+both `--model-name` and `--data-name`.
+
+### Evaluation
+
+Run GPU-based ML evaluation with 10 trials.
 
 ```bash
 python main.py prediction \
   --metric-name ML \
-  --model-name TADGAN \
+  --model-name VEDP-GAN \
   --data-name <dataset_name> \
   --data-dir <data_path> \
-  --save-dir <synthetic_data_path> \
+  --save-dir ./output \
+  --log-dir ./result/prediction \
   --eval-model-config-dir ./config/prediction \
-  --eval-model-num-trials 1 \
-  --device-ml gpu \
-  --test
+  --eval-model-num-trials 10 \
+  --device-ml gpu
 ```
 
-Run the generator ablation study:
+### Ablation Study
+
+Run the full ablation workflow on GPU.
 
 ```bash
 python main.py ablation \
@@ -240,9 +277,26 @@ python main.py ablation \
   --data-name <dataset_name> \
   --data-dir <data_path> \
   --config-dir ./config/ablation \
+  --exp-dir ./exp/ablation \
   --eval-model-config-dir ./config/prediction \
+  --eval-model-num-trials 10 \
   --device-ml gpu \
-  --test
+  --device-dcr gpu \
+  --device-train cuda \
+  --stability-num-seeds 1
+
+python main.py ablation \
+  --experiment blending_ablation \
+  --data-name <dataset_name> \
+  --data-dir <data_path> \
+  --config-dir ./config/ablation \
+  --exp-dir ./exp/ablation \
+  --eval-model-config-dir ./config/prediction \
+  --eval-model-num-trials 10 \
+  --device-ml gpu \
+  --device-dcr gpu \
+  --device-train cuda \
+  --stability-num-seeds 1
 ```
 
 More examples are available in:
@@ -251,13 +305,13 @@ More examples are available in:
 - `docs/prediction.md`
 - `docs/ablation_study.md`
 
-## TADGAN Configuration
+## VEDP-GAN Configuration
 
-The default public TADGAN configuration is stored in
-`config/generation/tadgan.toml`. Ablation configs under `config/ablation` reuse
+The default public VEDP-GAN configuration is stored in
+`config/generation/vedp_gan.toml`. Ablation configs under `config/ablation` reuse
 the same implementation and vary only the components required by each ablation.
 
-The default TADGAN setting uses:
+The default VEDP-GAN setting uses:
 
 - `latent_align_weight = 0.0`
 - `use_mode_seeking_regularization = false`

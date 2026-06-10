@@ -1,4 +1,4 @@
-"""`ave.py` 의미를 유지하는 residual TADGAN 학습 스크립트."""
+"""`ave.py` 의미를 유지하는 residual VEDP_GAN 학습 스크립트."""
 
 import copy
 import os
@@ -10,7 +10,7 @@ from torch import amp
 from torch.nn.utils import clip_grad_norm_
 
 from .dataloader import build_training_batch_sampler, iterate_training_batches
-from .model import TADGAN, TADGANConfig, VERSION_MAP, kl_loss
+from .model import VEDP_GAN, VEDP_GANConfig, VERSION_MAP, kl_loss
 from .progress import NullProgressReporter
 from .utils import (
     append_text,
@@ -218,10 +218,10 @@ def _resolve_fake_timestep(version_key, batch_size, device):
 def train(args, loaders, run_dirs, reporter=None, verbose=True):
     reporter = reporter or NullProgressReporter(verbose=verbose)
     if args.model_name not in VERSION_MAP:
-        raise ValueError("지원하지 않는 TADGAN 버전이다.")
+        raise ValueError("지원하지 않는 VEDP-GAN 버전이다.")
 
     version_key = VERSION_MAP[args.model_name]
-    config = TADGANConfig()
+    config = VEDP_GANConfig()
     config.load_config(args.config_path, verbose=verbose)
     if getattr(args, "test", False):
         config.epochs = min(config.epochs, 3)
@@ -229,7 +229,7 @@ def train(args, loaders, run_dirs, reporter=None, verbose=True):
     device = getattr(args, "device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
     con_dim = loaders.dataset.x_con.size(1)
     bin_dim = loaders.dataset.x_bin.size(1)
-    model = TADGAN(con_dim, bin_dim, config, loaders.num_classes).to(device)
+    model = VEDP_GAN(con_dim, bin_dim, config, loaders.num_classes).to(device)
     model.set_continuous_bounds(loaders.meta.get("con_min_scaled", []), loaders.meta.get("con_max_scaled", []))
     model.train()
     train_only = bool(getattr(args, "train_only", False))
@@ -295,7 +295,7 @@ def train(args, loaders, run_dirs, reporter=None, verbose=True):
     selection_save_every = max(1, getattr(args, "selection_save_every", 1))
 
     discrete_meta = {
-        "model_kind": "tadgan",
+        "model_kind": "vedp_gan",
         "decoder_outputs_bounded": bool(config.use_bounded_head),
         "con_cols": loaders.meta["con_cols"],
         "bin_cols": loaders.meta["bin_cols"],
@@ -354,7 +354,7 @@ def train(args, loaders, run_dirs, reporter=None, verbose=True):
             "model_state": model.state_dict(),
             "config": config.to_dict(),
             "meta": {
-                "model_kind": "tadgan",
+                "model_kind": "vedp_gan",
                 "version_key": version_key,
                 "decoder_outputs_bounded": bool(config.use_bounded_head),
                 "con_cols": loaders.meta["con_cols"],

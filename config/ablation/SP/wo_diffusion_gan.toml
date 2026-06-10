@@ -18,7 +18,7 @@ ks_complement_method = "asymp"
 [train]
 epochs = 7800
 lr = 1e-3
-## TADGAN 3-stage 학습 비율
+## VEDP-GAN 3-stage 학습 비율
 ## - 합이 1일 필요는 없고 상대 비율로 해석됨
 stage1_ratio = 0.15
 stage2_ratio = 0.35

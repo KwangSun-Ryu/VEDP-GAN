@@ -1,4 +1,4 @@
-"""TADGAN 공통 유틸."""
+"""VEDP_GAN 공통 유틸."""
 
 import json
 import os
@@ -230,7 +230,7 @@ def decoder_outputs_bounded(dec_out=None, meta_info=None):
     if "decoder_outputs_bounded" in meta_info:
         return bool(meta_info["decoder_outputs_bounded"])
     model_kind = str(meta_info.get("model_kind", "")).strip().lower()
-    return model_kind == "tadgan" and use_bounded_head(meta_info)
+    return model_kind == "vedp_gan" and use_bounded_head(meta_info)
 
 
 def use_continuous_clip(meta_info):

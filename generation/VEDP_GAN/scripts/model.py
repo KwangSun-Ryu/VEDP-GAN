@@ -1,10 +1,4 @@
-"""Canonical TADGAN architecture.
-
-This module intentionally contains only model-level code: configuration,
-encoder/decoder blocks, diffusion denoiser, adversarial generator, discriminator,
-and the final TADGAN module. Experiment orchestration, checkpoint selection, and
-ablation-specific utilities live outside this package.
-"""
+"""`ave.py` 의미를 유지하는 residual VEDP_GAN 모델 정의."""
 
 import os
 import tomllib
@@ -13,69 +7,20 @@ import torch
 import torch.nn as nn
 from tqdm.auto import tqdm
 
-
-NON_MODEL_CONFIG_SECTIONS = {"evaluation", "checkpoint_selection"}
-
-
-def flatten_model_config_dict(payload):
-    if not isinstance(payload, dict):
-        return {}
-
-    flat = {}
-
-    def _walk(node):
-        if not isinstance(node, dict):
-            return
-        for key, value in node.items():
-            if isinstance(value, dict):
-                _walk(value)
-            else:
-                flat[key] = value
-
-    for key, value in payload.items():
-        if key in NON_MODEL_CONFIG_SECTIONS:
-            continue
-        if isinstance(value, dict):
-            _walk(value)
-        else:
-            flat[key] = value
-    return flat
+from .utils import (
+    flatten_model_config_dict,
+    normalize_bounded_head_config,
+    summarize_model_config,
+)
 
 
-def normalize_bounded_head_config(config):
-    if not isinstance(config, dict):
-        return config
-    legacy_value = config.pop("use_continuous_projection", None)
-    if "use_bounded_head" not in config and legacy_value is not None:
-        config["use_bounded_head"] = legacy_value
-    return config
+VERSION_MAP = {"VEDP-GAN": "ave"}
 
 
-def _compact_config_value(value):
-    if isinstance(value, bool):
-        return str(value)
-    if isinstance(value, float):
-        return f"{value:g}"
-    return str(value)
-
-
-def summarize_model_config(model_name, config):
-    fields = [
-        f"[CFG] {model_name}",
-        f"epochs={_compact_config_value(config.epochs)}",
-        f"batch={_compact_config_value(config.batch_size)}",
-        f"lr={_compact_config_value(config.lr)}",
-        f"alpha={_compact_config_value(config.alpha)}",
-        f"dims=latent{config.latent_dim}/noise{config.noise_dim}/t{config.timesteps}",
-    ]
-    return " | ".join(fields)
-
-
-class TADGANConfig:
-    """Configuration object for the canonical TADGAN architecture."""
+class VEDP_GANConfig:
+    """`ave.py` 기본 철학에 residual skeleton을 얹은 설정."""
 
     def __init__(self):
-        ## Training and latent-space dimensions
         self.epochs = 1000
         self.latent_dim = 16
         self.noise_dim = 16
@@ -90,7 +35,6 @@ class TADGANConfig:
         self.w_cls = 1.0
         self.alpha = 0.5
 
-        ## Optimization options
         self.use_lr_scheduler = False
         self.use_r1_penalty = False
         self.r1_weight = 10.0
@@ -104,23 +48,19 @@ class TADGANConfig:
         self.grad_clip_norm = 1.0
         self.use_label_smoothing = False
         self.label_smoothing = 0.05
-
-        ## Public TADGAN defaults
         self.use_wide_condition_embedding = False
-        self.use_mode_seeking_regularization = False
-        self.mode_seeking_weight = 0.0
+        self.use_mode_seeking_regularization = True
+        self.mode_seeking_weight = 0.01
         self.mode_seeking_eps = 1e-6
-        self.latent_align_weight = 0.0
+        self.latent_align_weight = 0.01
         self.stage1_end_epoch = None
         self.stage2_end_epoch = None
         self.stage1_ratio = 0.2
         self.stage2_ratio = 0.4
         self.stage3_ratio = 0.4
-        self.stage3_mode_seeking_scale = 0.0
+        self.stage3_mode_seeking_scale = 0.5
         self.lr_scheduler_type = "cosine"
         self.lr_scheduler_t_max = None
-
-        ## Decoder and residual architecture options
         self.use_bounded_head = False
         self.use_continuous_clip = False
         self.use_residual_encoder = True
@@ -128,7 +68,6 @@ class TADGANConfig:
         self.use_spectral_norm_discriminator = False
         self.use_two_layer_decoder_heads = True
 
-        ## Hidden dimensions and block depths
         self.encoder_hidden_dim = 128
         self.decoder_hidden_dim = 128
         self.decoder_shared_dim = 64
@@ -160,7 +99,7 @@ class TADGANConfig:
             else:
                 ignored_keys.append(key)
         if verbose:
-            tqdm.write(summarize_model_config("TADGAN", self))
+            tqdm.write(summarize_model_config("VEDP-GAN", self))
             if ignored_keys:
                 tqdm.write(f"[WARN] ignored config keys: {', '.join(sorted(ignored_keys))}")
 
@@ -173,7 +112,7 @@ def _make_linear(in_dim, out_dim, use_spectral_norm=False):
 
 
 class ResidualMLPBlock(nn.Module):
-    """Residual MLP block used across encoder, generator, and discriminator."""
+    """LayerNorm 기반 residual MLP block."""
 
     def __init__(self, hidden_dim, use_spectral_norm=False):
         super().__init__()
@@ -208,7 +147,7 @@ class MLPProjector(nn.Module):
 
 
 class Encoder(nn.Module):
-    """Variational encoder that maps tabular features to latent variables."""
+    """Input feature를 latent z0로 압축."""
 
     def __init__(self, input_dim, latent_dim, hidden_dim=128, num_blocks=2, use_residual=True):
         super().__init__()
@@ -247,7 +186,7 @@ class Encoder(nn.Module):
 
 
 class Diffusion(nn.Module):
-    """Forward diffusion process in latent space."""
+    """Forward noising만 담당하는 diffusion module."""
 
     def __init__(self, timesteps, beta_start=1e-4, beta_end=0.02):
         super().__init__()
@@ -274,7 +213,7 @@ class Diffusion(nn.Module):
 
 
 class Generator(nn.Module):
-    """Conditional generator that produces latent samples from noise."""
+    """`ave.py` 의미를 따르는 조건부 latent generator."""
 
     def __init__(self, noise_dim, latent_dim, num_classes, timesteps,
                  hidden_dim=128, num_blocks=2, t_emb_dim=16, y_emb_dim=4):
@@ -301,7 +240,7 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    """Auxiliary-classifier discriminator in latent space."""
+    """`ave.py` 의미를 따르는 AC-GAN 형태 discriminator."""
 
     def __init__(self, latent_dim, num_classes, timesteps,
                  hidden_dim=128, num_blocks=2, t_emb_dim=16, y_emb_dim=4,
@@ -332,7 +271,7 @@ class Discriminator(nn.Module):
 
 
 class DecoderMixed(nn.Module):
-    """Decoder with separate heads for continuous and discrete features."""
+    """연속형과 이산형 feature를 동시에 복원하는 decoder."""
 
     def __init__(self, latent_dim, con_dim, bin_dim, hidden_dim=128,
                  num_blocks=2, use_residual=True, use_two_layer_heads=True,
@@ -428,8 +367,8 @@ class DecoderMixed(nn.Module):
         return out
 
 
-class TADGAN(nn.Module):
-    """TADGAN model: VAE encoder/decoder, latent diffusion, and GAN heads."""
+class VEDP_GAN(nn.Module):
+    """`ave.py` 의미를 유지하는 residual VEDP_GAN."""
 
     def __init__(self, con_dim, bin_dim, config, num_classes):
         super().__init__()

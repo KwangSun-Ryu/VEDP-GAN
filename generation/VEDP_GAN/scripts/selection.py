@@ -1,4 +1,4 @@
-"""Best-checkpoint selection for the patched generation TADGAN."""
+"""Best-checkpoint selection for the patched generation VEDP_GAN."""
 
 import glob
 import os
@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 
-from . import sample as tadgan_sample
+from . import sample as vedp_gan_sample
 from .utils import (
     build_checkpoint_path,
     build_run_dirs_from_base,
@@ -111,7 +111,7 @@ def _evaluate_candidate(args, loaders, run_dirs, entry, sampling_session=None):
     eval_args = _build_selection_eval_args(args)
 
     start = time.time()
-    synthetic_path, synthetic_frame = tadgan_sample.sample(
+    synthetic_path, synthetic_frame = vedp_gan_sample.sample(
         eval_args,
         loaders,
         candidate_dirs,
@@ -288,7 +288,7 @@ def _cleanup_checkpoints(args, run_dirs):
 def run_best_selection(args, loaders, run_dirs):
     entries = _resolve_candidate_entries(args, run_dirs)
     if not entries:
-        raise FileNotFoundError(f"No TADGAN checkpoint candidates found: {run_dirs['checkpoints_dir']}")
+        raise FileNotFoundError(f"No VEDP_GAN checkpoint candidates found: {run_dirs['checkpoints_dir']}")
 
     session = {}
     rows = [_evaluate_candidate(args, loaders, run_dirs, entry, sampling_session=session) for entry in entries]
@@ -304,7 +304,7 @@ def run_best_selection(args, loaders, run_dirs):
     best_path = build_checkpoint_path(run_dirs, args.data_name, args.variant_slug, "best_on_test")
     shutil.copy2(selected["ckpt_path"], best_path)
     if not os.path.exists(best_path):
-        raise FileNotFoundError(f"TADGAN best_on_test checkpoint 생성에 실패했습니다: {best_path}")
+        raise FileNotFoundError(f"VEDP_GAN best_on_test checkpoint 생성에 실패했습니다: {best_path}")
     _cleanup_checkpoints(args, run_dirs)
 
     save_json(

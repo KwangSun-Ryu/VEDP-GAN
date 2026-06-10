@@ -1,4 +1,4 @@
-"""generation TADGAN 진행바 유틸."""
+"""generation VEDP_GAN 진행바 유틸."""
 
 import os
 import shutil

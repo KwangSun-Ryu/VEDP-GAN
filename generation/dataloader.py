@@ -122,10 +122,10 @@ class TabularDataLoader():
         
             return SimpleNamespace(**data_loader)
 
-        if self.model_name == "TADGAN":
-            from generation.TADGAN.scripts import dataloader as tadgan_dataloader
+        if self.model_name == "VEDP-GAN":
+            from generation.VEDP_GAN.scripts import dataloader as vedp_gan_dataloader
 
-            tadgan_args = SimpleNamespace(
+            vedp_gan_args = SimpleNamespace(
                 data_name=self.data_name,
                 data_dir=self.data_dir,
                 model_name=self.model_name,
@@ -134,10 +134,7 @@ class TabularDataLoader():
                 bin_threshold=0.5,
                 device="cuda" )
 
-            return tadgan_dataloader.make_dataloader(tadgan_args)
-
-        if self.model_name in {"TADGAN_ver1", "TADGAN_ver2", "TADGAN_ver3"}:
-            raise ValueError("TADGAN_ver1/2/3 are legacy names. Use TADGAN.")
+            return vedp_gan_dataloader.make_dataloader(vedp_gan_args)
 
     def load_cols_info_path(self):
         '''

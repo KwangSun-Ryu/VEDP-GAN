@@ -86,8 +86,8 @@ def create_args():
     parser.add_argument('--seed', type=int, default=42, help='재현성 확보를 위한 SEED 값 지정')
     parser.add_argument('--sampling-strategy', type=str, choices=['prior', 'balanced'], default='prior',
                         help='합성 데이터 class 분포 전략')
-    parser.add_argument('--config', type=str, default='./config/generation/tadgan.toml',
-                        help='TADGAN 샘플링 TOML config 경로')
+    parser.add_argument('--config', type=str, default='./config/generation/vedp_gan.toml',
+                        help='VEDP-GAN 샘플링 TOML config 경로')
     parser.add_argument('--eval-model-config-dir', type=str, default='./config/prediction',
                         help='checkpoint selection 평가 모델 config 경로')
     parser.add_argument('--verbose-model', action='store_true', help='모델 내부 진행 로그 출력 여부')

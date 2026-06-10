@@ -26,11 +26,11 @@ from ablation_study.scripts.evaluation.utility_evaluation import evaluate_utilit
 from ablation_study.scripts.progress import ProgressReporter
 from ablation_study.scripts.progress import NullProgressReporter
 from ablation_study.scripts.sample_diffusion_only import sample as sample_diffusion_only
-from ablation_study.scripts.sample_tadgan import sample as sample_tadgan
+from ablation_study.scripts.sample_vedp_gan import sample as sample_vedp_gan
 from ablation_study.scripts.sample_vae_free import sample as sample_vae_free
 from ablation_study.scripts.sample_vanilla_gan import sample as sample_vanilla
 from ablation_study.scripts.train_diffusion_only import train as train_diffusion_only
-from ablation_study.scripts.train_tadgan import train as train_tadgan
+from ablation_study.scripts.train_vedp_gan import train as train_vedp_gan
 from ablation_study.scripts.train_vae_free import train as train_vae_free
 from ablation_study.scripts.train_vanilla_gan import train as train_vanilla
 from ablation_study.scripts.utils import (
@@ -61,21 +61,21 @@ from ablation_study.scripts.utils import (
 
 
 GENERATOR_ROWS = [
-    "TADGAN",
+    "VEDP-GAN",
     "w/o VAE",
     "w/o Diffusion (Encoder-Decoder + GAN)",
     "w/o GAN (Diffusion only)",
     "Vanilla GAN",
 ]
-BLENDING_BASE_VARIANT_SLUG = "tadgan"
+BLENDING_BASE_VARIANT_SLUG = "vedp_gan"
 BLENDING_BASE_CONFIG_NAME = f"{BLENDING_BASE_VARIANT_SLUG}.toml"
 BLENDING_ROWS = [
-    "TADGAN (α=0.5)",
-    "TADGAN (α=0)",
-    "TADGAN (α=1)",
+    "VEDP-GAN (α=0.5)",
+    "VEDP-GAN (α=0)",
+    "VEDP-GAN (α=1)",
 ]
 EVAL_STAGE_ORDER = ["ml", "sdmetrics", "utility", "dcr"]
-BLENDING_AUC_MODES = ("ml_seed", "tadgan_seed", "both")
+BLENDING_AUC_MODES = ("ml_seed", "vedp_gan_seed", "both")
 REFERENCE_SCOPES = ("train", "test", "full")
 FIDELITY_METRIC_LABELS = {"KSComplement": "KSC", "TVComplement": "TVC"}
 FIDELITY_COLUMN_SPECS = [
@@ -127,11 +127,11 @@ SELECTION_STABLE_NEXT_WEIGHT = 0.25
 
 GENERATOR_COMPARISON_SPECS = [
     {
-        "variant_slug": "tadgan",
-        "display_name": "TADGAN",
-        "kind": "tadgan",
-        "model_name": "TADGAN",
-        "config_name": "tadgan.toml",
+        "variant_slug": "vedp_gan",
+        "display_name": "VEDP-GAN",
+        "kind": "vedp_gan",
+        "model_name": "VEDP-GAN",
+        "config_name": "vedp_gan.toml",
     },
     {
         "variant_slug": "wovae",
@@ -143,8 +143,8 @@ GENERATOR_COMPARISON_SPECS = [
     {
         "variant_slug": "wo_diffusion_gan",
         "display_name": "w/o Diffusion (Encoder-Decoder + GAN)",
-        "kind": "tadgan",
-        "model_name": "TADGAN_WO_DIFFUSION",
+        "kind": "vedp_gan",
+        "model_name": "VEDP_GAN_WO_DIFFUSION",
         "config_name": "wo_diffusion_gan.toml",
     },
     {
@@ -166,23 +166,23 @@ GENERATOR_COMPARISON_SPECS = [
 BLENDING_SPECS = [
     {
         "variant_slug": "blend_alpha_05",
-        "display_name": "TADGAN (α=0.5)",
-        "kind": "tadgan",
-        "model_name": "TADGAN",
+        "display_name": "VEDP-GAN (α=0.5)",
+        "kind": "vedp_gan",
+        "model_name": "VEDP-GAN",
         "config_name": "blending_alpha_05.toml",
     },
     {
         "variant_slug": "blend_alpha_00",
-        "display_name": "TADGAN (α=0)",
-        "kind": "tadgan",
-        "model_name": "TADGAN",
+        "display_name": "VEDP-GAN (α=0)",
+        "kind": "vedp_gan",
+        "model_name": "VEDP-GAN",
         "config_name": "blending_alpha_00.toml",
     },
     {
         "variant_slug": "blend_alpha_10",
-        "display_name": "TADGAN (α=1)",
-        "kind": "tadgan",
-        "model_name": "TADGAN",
+        "display_name": "VEDP-GAN (α=1)",
+        "kind": "vedp_gan",
+        "model_name": "VEDP-GAN",
         "config_name": "blending_alpha_10.toml",
     },
 ]
@@ -197,14 +197,14 @@ LEGACY_EXPERIMENT_ALIASES = {}
 EXPERIMENT_CHOICES = sorted([*EXPERIMENT_SPECS.keys(), *LEGACY_EXPERIMENT_ALIASES.keys()])
 
 TRAIN_DISPATCH = {
-    "tadgan": train_tadgan,
+    "vedp_gan": train_vedp_gan,
     "vae_free": train_vae_free,
     "diffusion_only": train_diffusion_only,
     "vanilla_gan": train_vanilla,
 }
 
 SAMPLE_DISPATCH = {
-    "tadgan": sample_tadgan,
+    "vedp_gan": sample_vedp_gan,
     "vae_free": sample_vae_free,
     "diffusion_only": sample_diffusion_only,
     "vanilla_gan": sample_vanilla,
@@ -1079,7 +1079,7 @@ def resolve_expected_candidate_epoch_start(spec, config_dict, test=False):
     fixed_start = config_flat.get("selection_candidate_start_epoch", None)
     if fixed_start is not None:
         return resolve_selection_candidate_start_epoch(epochs, selection_candidate_start_epoch=fixed_start)
-    if spec["kind"] == "tadgan":
+    if spec["kind"] == "vedp_gan":
         return resolve_selection_candidate_start_epoch(
             epochs,
             config_flat.get("stage1_ratio", 0.2),
@@ -2820,7 +2820,7 @@ def run_variant(args, spec, data_name, reporter):
     aggregate_variant(args, spec, data_name, run_dirs, seed_records, reporter, config_dict)
 
 
-@ntfy_notify(title="TADGAN Ablation Study")
+@ntfy_notify(title="VEDP-GAN Ablation Study")
 def main():
     parser = build_parser()
     args = parser.parse_args()

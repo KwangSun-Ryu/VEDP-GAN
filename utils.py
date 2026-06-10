@@ -16,7 +16,7 @@ DATA_NAME = [
 EXCLUDE_DATA_NAME = ['ATD', 'BC', 'BCP', 'CAD', 'COVID', 'CVD', 'Gallstone', 'HFZ', 'IgAN', 'LiC', 'LuC', 'NHANES', 'OC', 'PPD', 'RPA', 'SHLD', 'SUPPORT2', 'VitalDB', 'X2B8']
 
 ## 학습 모델 이름 ##
-GEN_MODEL_NAME = ['TabDDPM', 'CTGAN', 'STaSy', 'CoDi', 'AutoDiff', 'TTGAN', 'TADGAN']
+GEN_MODEL_NAME = ['TabDDPM', 'CTGAN', 'STaSy', 'CoDi', 'AutoDiff', 'TTGAN', 'VEDP-GAN']
 
 ## AUC를 평가하기 위한 모델 이름 ##
 EVAL_MODEL_NAME = ['Random_Forest', 'XGBoost', 'LightGBM', 'CatBoost']

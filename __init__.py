@@ -1,1 +1,1 @@
-"""TADGAN GitHub package."""
+"""VEDP-GAN GitHub package."""

@@ -13,6 +13,7 @@ output/
 result/
 sample/
 catboost_info/
+exp/
 
 *.pt
 *.pth

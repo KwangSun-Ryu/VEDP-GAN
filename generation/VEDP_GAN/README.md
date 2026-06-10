@@ -1,25 +1,25 @@
-# TADGAN Model Package
+# VEDP-GAN Model Package
 
-`generation/TADGAN` contains the canonical TADGAN model implementation.
+`generation/VEDP_GAN` contains the canonical VEDP-GAN model implementation.
 
 ## Files
 
 ```text
-generation/TADGAN/
-├── model.py           # TADGAN architecture
+generation/VEDP_GAN/
+├── model.py           # VEDP-GAN architecture
 └── __init__.py
 ```
 
 ## Architecture
 
-`model.py` defines the complete TADGAN architecture:
+`model.py` defines the complete VEDP-GAN architecture:
 
 - `Encoder`: variational encoder for mixed tabular features
 - `Diffusion`: latent forward diffusion process
 - `Generator`: conditional latent generator
 - `Discriminator`: auxiliary-classifier discriminator
 - `DecoderMixed`: decoder with continuous and discrete output heads
-- `TADGAN`: end-to-end model that combines the modules above
+- `VEDP-GAN`: end-to-end model that combines the modules above
 
 Generation orchestration, checkpoint selection, and sampling utilities are
-restored inside `generation/TADGAN/scripts` for standalone public execution.
+restored inside `generation/VEDP_GAN/scripts` for standalone public execution.
