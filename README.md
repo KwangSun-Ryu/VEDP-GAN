@@ -25,7 +25,7 @@ VEDP-GAN/
 │   └── TTGAN/
 ├── prediction/                # downstream ML and statistical evaluation
 ├── ablation_study/            # ablation runners built on generation/VEDP_GAN
-├── config/
+└── config/
     ├── generation/
     ├── prediction/
     └── ablation/
