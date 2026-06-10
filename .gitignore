@@ -22,5 +22,6 @@ exp/
 *.jsonl
 *.tmp
 
+.gitignore
 .DS_Store
 Thumbs.db
