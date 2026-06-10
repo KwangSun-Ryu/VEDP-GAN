@@ -7,9 +7,6 @@ from tqdm.auto import tqdm
 import argparse, time, os, json
 import pandas as pd
 
-# 알림 모듈 불러오기
-from notify_ntfy import ntfy_notify
-
 
 def load_dataset_names(data_dir):
     info_path = os.path.join(data_dir, 'datasets_info.json')
@@ -54,7 +51,6 @@ def create_args():
     return args
 
 
-@ntfy_notify(title='모델 학습 & 합성 데이터 생성', notify_on='both')
 def main():
     args = create_args()
 

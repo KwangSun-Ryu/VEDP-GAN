@@ -11,8 +11,6 @@ import numpy as np
 import pandas as pd
 import torch
 
-from notify_ntfy import ntfy_notify
-
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
@@ -2820,7 +2818,6 @@ def run_variant(args, spec, data_name, reporter):
     aggregate_variant(args, spec, data_name, run_dirs, seed_records, reporter, config_dict)
 
 
-@ntfy_notify(title="VEDP-GAN Ablation Study")
 def main():
     parser = build_parser()
     args = parser.parse_args()

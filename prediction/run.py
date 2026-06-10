@@ -10,7 +10,6 @@ import json
 import os
 
 from utils import GEN_MODEL_NAME, METRICS_NAME
-from notify_ntfy import ntfy_notify
 
 from .scripts.ml_evaluation import eval_model_train_and_evaluate
 from .scripts.sdmetrics_evaluation import evaluate_fidelity_diversity
@@ -161,7 +160,6 @@ def make_args():
 # --------------------------------------------------------------------------------
 # 3. 스크립트 시작 포인트
 # --------------------------------------------------------------------------------
-@ntfy_notify(title='합성 데이터 평가', notify_on='both')
 def main():
     """
     사용자 요청에 맞춰 선택된 평가 루틴을 실행한다.

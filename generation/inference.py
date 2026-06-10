@@ -18,7 +18,6 @@ import json
 import pandas as pd
 
 from utils import GEN_MODEL_NAME, set_seed
-from notify_ntfy import ntfy_notify
 
 
 def load_dataset_names(data_dir):
@@ -108,7 +107,6 @@ def create_args():
     return args
 
 
-@ntfy_notify(title='합성 데이터 생성', notify_on='both')
 def main():
     args = create_args()
 
