@@ -1,15 +1,21 @@
 # VEDP-GAN
 
-Research code structure for VEDP-GAN.
+This is the official repository for the VEDP-GAN paper.
 
 This repository contains the tabular data generation model, downstream prediction
-evaluation, and ablation study pipeline used for the experiments.
+evaluation, ablation study pipeline, and the healthcare datasets used for the
+reported experiments.
 
 ## Repository Structure
 
 ```text
 VEDP-GAN/
 ├── main.py
+├── data/
+│   ├── datasets_info.json
+│   ├── cols_info/             # metadata for the included healthcare datasets
+│   ├── original_data/         # original healthcare datasets
+│   └── synthetic_data/        # VEDP-GAN synthetic datasets
 ├── generation/
 │   ├── VEDP_GAN/              # canonical VEDP-GAN architecture
 │   ├── TabDDPM/
@@ -17,13 +23,12 @@ VEDP-GAN/
 │   ├── CoDi/
 │   ├── AutoDiff/
 │   └── TTGAN/
-├── prediction/              # downstream ML and statistical evaluation
-├── ablation_study/          # ablation runners built on generation/VEDP_GAN
+├── prediction/                # downstream ML and statistical evaluation
+├── ablation_study/            # ablation runners built on generation/VEDP_GAN
 ├── config/
-│   ├── generation/
-│   ├── prediction/
-│   └── ablation/
-└── docs/
+    ├── generation/
+    ├── prediction/
+    └── ablation/
 ```
 
 ## Model Overview

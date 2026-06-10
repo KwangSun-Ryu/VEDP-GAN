@@ -1,5 +1,5 @@
 """
-DCR 평가 스크립트
+DCR evaluation script
 """
 import multiprocessing as mp
 import os
@@ -20,7 +20,7 @@ from .progress_reporter import NullProgressReporter
 
 
 # --------------------------------------------------------------------------------
-# 1. DCR 계산 유틸
+# 1. DCR calculation utilities
 # --------------------------------------------------------------------------------
 def _configure_mp_safety():
     ## Avoid oversubscription in multiprocessing workers.
@@ -376,7 +376,7 @@ def _append_progress(progress_path, record, lock=None):
 
 
 def calculate_dcr_score(real_data, synt_data, meta_data, device="cpu"):
-    ## 메타데이터 변환 ##
+    ## Convert metadata ##
     meta_data = {
         "METADATA_SPEC_VERSION": "SINGLE_TABLE_V1",
         "columns": meta_data }
@@ -384,7 +384,7 @@ def calculate_dcr_score(real_data, synt_data, meta_data, device="cpu"):
 
     device = _resolve_dcr_device(device)
     
-    ## score 계산 ##
+    ## Calculate scores ##
     real_data = real_data.copy()
     synt_data = synt_data.copy()
     with warnings.catch_warnings():
@@ -415,7 +415,7 @@ def compute_dcr_for_dataset(args):
             data_dir=data_dir,
             save_dir=save_dir,
             original_test=False)
-        ## 메타데이터 호출 ##
+        ## Load metadata ##
         base_meta_data = dataset.cols_info
         dataset_error = False
     except Exception:
@@ -439,7 +439,7 @@ def compute_dcr_for_dataset(args):
                 synt_data = pd.concat([X_train, y_train], axis=1)
                 real_data = pd.concat([X_test, y_test], axis=1)
                 
-                ## 교집합 기준으로 맞추기
+                ## Align by intersection
                 meta_cols = set(base_meta_data.keys())
                 data_cols = [c for c in synt_data.columns if c in meta_cols and c in real_data.columns]
 
@@ -474,11 +474,11 @@ def progress_monitor(progress_queue, reporter, metric_name):
 
 
 # --------------------------------------------------------------------------------
-# 2. DCR 평가 실행
+# 2. Run DCR evaluation
 # --------------------------------------------------------------------------------
 def evaluate_DCR(args, reporter=None):
     """
-    DCR 지표를 계산해 모델별 CSV 파일로 저장한다.
+    Calculate DCR metrics and save one CSV file per model.
     """
     reporter = reporter or NullProgressReporter(verbose=getattr(args, "verbose_eval", False))
 
@@ -637,6 +637,6 @@ def evaluate_DCR(args, reporter=None):
         suffix_tag = _get_suffix_tag(args, multiples)
         output_path = os.path.join(output_dir, f"DCR_scores{suffix_tag}.csv")
         results.to_csv(output_path, index=False)
-        reporter.info(f"[DCR] 저장 완료: {output_path}", verbose_only=True)
+        reporter.info(f"[DCR] saved: {output_path}", verbose_only=True)
 
     reporter.ok("[OK] metric=DCR saved")

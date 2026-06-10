@@ -113,9 +113,9 @@ def _make_lr_scheduler(optimizer, config):
     elif scheduler_type in {"cosine_fixed", "fixed_t_max", "fixed_cosine"}:
         t_max = getattr(config, "lr_scheduler_t_max", None)
         if t_max is None or t_max <= 0:
-            raise ValueError("lr_scheduler_type='cosine_fixed' 사용 시 lr_scheduler_t_max > 0 이어야 한다.")
+            raise ValueError("lr_scheduler_type='cosine_fixed' requires lr_scheduler_t_max > 0.")
     else:
-        raise ValueError(f"지원하지 않는 lr_scheduler_type={scheduler_type}")
+        raise ValueError(f"unsupported lr_scheduler_type={scheduler_type}")
     return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=int(t_max), eta_min=config.lr * 0.1)
 
 
@@ -224,7 +224,7 @@ def _resolve_fake_timestep(version_key, batch_size, device):
 def train(args, loaders, run_dirs, reporter=None, verbose=True):
     reporter = reporter or NullProgressReporter(verbose=verbose)
     if args.model_name not in VERSION_MAP:
-        raise ValueError("지원하지 않는 VEDP-GAN 버전이다.")
+        raise ValueError("Unsupported VEDP-GAN version.")
 
     version_key = VERSION_MAP[args.model_name]
     config = VEDP_GANConfig()

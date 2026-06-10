@@ -1,5 +1,5 @@
 """
-평가 모델 학습 및 측정을 위해, 데이터를 전처리해주는 스크립트 
+Preprocess data for training and evaluating prediction models. 
 """
 import os, json, glob
 import numpy as np
@@ -8,29 +8,29 @@ from pandas.api.types import is_numeric_dtype, CategoricalDtype
 
 class TabularDataset():
     def __init__(self, model_name, data_name, data_dir='./data', save_dir='./output', original_test=False):
-        self.data_dir   = data_dir    # 원천 데이터 경로
-        self.save_dir   = save_dir    # 합성 데이터 경로
+        self.data_dir   = data_dir    # source data path
+        self.save_dir   = save_dir    # synthetic data path
         
-        self.data_name  = data_name   # 데이터셋 이름
-        self.model_name = model_name # 생성 모델 이름
+        self.data_name  = data_name   # Dataset name
+        self.model_name = model_name # Generative model name
         self.original_test = bool(original_test)
         
-        # target col 정보 추출
+        # Extract target column information
         with open(os.path.join(self.data_dir, 'datasets_info.json'), 'r', encoding="utf-8") as file:
             datasets_info = json.load(file)
             data_info = datasets_info[data_name]
-        self.target = self.normalize_columns(data_info['target']) # target 열 반환
+        self.target = self.normalize_columns(data_info['target']) # return the target column
         
-        # cols 정보 추출
+        # Extract column information
         with open(os.path.join(self.data_dir, 'cols_info', f"{self.data_name}_metadata.json"), encoding="utf-8") as file:
             cols_info = json.load(file)
         raw_cols_info = cols_info['tables']['table']['columns']
         self.cols_info = self.normalize_columns(raw_cols_info)
-        # 데이터프레임 불러오기
+        # Load DataFrames
         self.train_data, self.test_data = self.load_data()
     
     def load_data(self):
-        """ train, test 데이터를 불러와 데이터프레임으로 반환하는 메소드 """
+        """Load train/test data and return them as DataFrames."""
         pattern = os.path.join(self.save_dir, self.model_name, f"{self.data_name}_{self.model_name}_syn*.csv")
         train_path = next((path for path in glob.glob(pattern)), None)
         test_path  = os.path.join(self.data_dir, 'original_data', f"{self.data_name}.csv")
@@ -44,17 +44,17 @@ class TabularDataset():
             return train_data, test_data
 
         if train_path is None:
-            raise FileNotFoundError(f"{pattern}에 맞는 합성 데이터가 없어요!")
+            raise FileNotFoundError(f"{pattern} has no matching synthetic data!")
 
         train_data = self.normalize_columns(pd.read_csv(train_path))
         
-        # test data만 추출
+        # Extract test data only
         test_data  = original_data.loc[original_data['split'] == 'test', :].drop(columns=['split']) 
         
         return train_data, test_data
     
     def preprocess(self, multiples_max=None, test_num=None):
-        """데이터를 전처리하는 메소드"""
+        """Preprocess data."""
         train_data = self.train_data
         test_data = self.test_data
         if multiples_max is not None and 'multiples' in train_data.columns:
@@ -64,7 +64,7 @@ class TabularDataset():
             train_data = self.balanced_head(train_data, self.target, test_num)
             test_data = self.balanced_head(test_data, self.target, test_num)
 
-        # 연속형/범주형 열 분리
+        # Split continuous/categorical columns
         raw_cat_cols = [col for col in self.cols_info.keys() if self.cols_info[col]['sdtype'] == 'categorical']
         raw_con_cols = [col for col in self.cols_info.keys() if self.cols_info[col]['sdtype'] == 'numerical']
 
@@ -72,21 +72,21 @@ class TabularDataset():
             raw_cat_cols.remove(self.target)
 
         cat_cols = [self.normalize_columns(col) for col in raw_cat_cols]
-        con_cols = [self.normalize_columns(col) for col in raw_con_cols if col != self.target] # target을 제외한 연속형 변수
+        con_cols = [self.normalize_columns(col) for col in raw_con_cols if col != self.target] # continuous variables excluding the target
 
-        # X_train, X_test, y_train, y_test 분리 (TSTR: 합성→학습, 실제→평가)
+        # Split X_train, X_test, y_train, y_test (TSTR: synthetic -> train, real -> evaluate)
         X_train = self.normalize_columns(train_data.drop(columns=[self.target], errors='ignore').copy())
         X_test  = self.normalize_columns(test_data.drop(columns=[self.target]).copy())
         if 'multiples' in X_train.columns:
             X_train = X_train.drop(columns=['multiples'])
 
-        # 기준 열 집합 통일
+        # Align reference column sets
         feature_cols = list(X_train.columns)
         X_train = X_train[feature_cols].copy()
         X_test = X_test.reindex(columns=feature_cols).copy()
         combined = pd.concat([X_train, X_test], axis=0)
 
-        # 상수 열 제거 → CatBoost 등에서 "all features constant" 오류 방지
+        # Remove constant columns to avoid "all features constant" errors in CatBoost and similar models
         const_cols = [col for col in feature_cols 
                 if (combined[col].nunique(dropna=False) <= 1) and (col in con_cols)]
         if const_cols:
@@ -98,7 +98,7 @@ class TabularDataset():
         y_train = train_data[self.target].copy()
         y_test  = test_data[self.target].copy()
         
-        # 범주형 컬럼 인코딩: 합성/실제 전체 범주로 카테고리 정의
+        # Encode categorical columns by defining categories from all synthetic/real values
         for col in cat_cols:
             if col not in X_train.columns:
                 continue
@@ -112,7 +112,7 @@ class TabularDataset():
             X_train[col] = train_vals.astype(cat_type).cat.codes.astype('int64')
             X_test[col] = test_vals.astype(cat_type).cat.codes.astype('int64')
         
-        # target이 비수치형이면 동일한 방식으로 인코딩
+        # Encode non-numeric targets the same way
         if not is_numeric_dtype(y_train):
             y_train_vals = self._normalize_categorical(y_train)
             y_test_vals = self._normalize_categorical(y_test)
@@ -127,13 +127,13 @@ class TabularDataset():
         return X_train, X_test, y_train, y_test, cat_cols, con_cols
     
     def get_data(self, multiples_max=None, test_num=None):
-        """실제 사용하는 데이터를 반환하는 메소드"""
+        """Return the data actually used by evaluation."""
         self.X_train, self.X_test, self.y_train, self.y_test, self.cat_cols, self.con_cols = self.preprocess(
             multiples_max=multiples_max, test_num=test_num)
         return self.X_train, self.X_test, self.y_train, self.y_test, self.cat_cols, self.con_cols, self.target
 
     def get_multiples_max(self):
-        """multiples 컬럼의 최대값 반환 (없으면 1)"""
+        """Return the maximum value of the multiples column, or 1 if absent."""
         if 'multiples' not in self.train_data.columns:
             return 1
         multiples = pd.to_numeric(self.train_data['multiples'], errors='coerce')
@@ -144,7 +144,7 @@ class TabularDataset():
 
     @staticmethod
     def balanced_head(data, target, test_num):
-        """target 기준으로 클래스별 동일 개수만큼 head 추출"""
+        """Take the same number of head rows per class based on target."""
         if test_num is None:
             return data
         if target not in data.columns:
@@ -174,7 +174,7 @@ class TabularDataset():
     
     @staticmethod
     def _normalize_categorical(series):
-        """카테고리 값을 문자열로 통일하고 불필요한 포맷을 정리"""
+        """Normalize category values as strings and clean unnecessary formatting."""
         series = series.astype(str).str.strip()
         series = series.str.replace(r'(?<=\d)\.0+$', '', regex=True)
         series = series.replace({'nan': np.nan, 'NaN': np.nan, 'None': np.nan, '': np.nan})

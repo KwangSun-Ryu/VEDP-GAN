@@ -1,4 +1,4 @@
-"""VEDP_GAN 공통 유틸."""
+"""Shared VEDP_GAN utilities."""
 
 import json
 import os
@@ -348,7 +348,7 @@ def label_to_index(target, mapping, index_to_value):
     for key, idx in mapping.items():
         if str(key) == str(target):
             return idx
-    raise KeyError(f"알 수 없는 target_class: {target}")
+    raise KeyError(f"unknown target_class: {target}")
 
 
 def _match_count_for_label(label_value, counts):
@@ -373,7 +373,7 @@ def resolve_class_sample_sizes(class_order, total_rows, sampling_strategy="prior
         return [base + (1 if idx < remainder else 0) for idx in range(num_classes)]
 
     if strategy != "prior":
-        raise ValueError(f"지원하지 않는 sampling_strategy: {sampling_strategy}")
+        raise ValueError(f"unsupported sampling_strategy: {sampling_strategy}")
 
     def _allocate(counts):
         if not counts:
@@ -494,7 +494,7 @@ def compose_mixed_feature_tensor(fake_out, meta_info):
 
     reference = fake_out.get("x_hat_con", fake_out.get("x_hat_bin_logit"))
     if reference is None:
-        raise ValueError("fake_out에 복원 가능한 출력이 없다.")
+        raise ValueError("fake_out has no recoverable output.")
     return torch.zeros(reference.size(0), 0, device=reference.device, dtype=reference.dtype)
 
 

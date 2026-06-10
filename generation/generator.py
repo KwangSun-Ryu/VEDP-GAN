@@ -1,5 +1,5 @@
 '''
-dataloader를 불러와 데이터셋을 생성 후, 모델 학습 및 생성하는 클래스 생성하는 코드
+Code for loading dataloaders, creating datasets, training models, and generating data
 '''
 import json
 import glob
@@ -20,7 +20,7 @@ from .dataloader import TabularDataLoader
 from utils import set_seed
 from generation.selection import copytree_replace, flatten_config, load_model_selection_config, run_best_selection
 
-#### CTGAN 라이브러리 ####
+#### CTGAN library ####
 from sdv.single_table import CTGANSynthesizer
 from sdv.sampling import Condition
 from sdv.utils import load_synthesizer
@@ -39,10 +39,10 @@ class Generator():
             verbose=self.verbose,
         ).make_dataloader()
         self.data_name    = data_name
-        self.model_name   = model_name # 모델 이름
-        self.data_dir     = data_dir   # 데이터셋 경로
-        self.exp_dir      = exp_dir    # 모델 가중치 및 설정 파일 경로
-        self.save_dir     = save_dir   # 데이터 저장 경로
+        self.model_name   = model_name # model name
+        self.data_dir     = data_dir   # dataset path
+        self.exp_dir      = exp_dir    # model weight and config file path
+        self.save_dir     = save_dir   # data output path
         self.device       = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.seed         = set_seed(seed)
         self.sampling_strategy = sampling_strategy
@@ -98,12 +98,12 @@ class Generator():
         if not config_path.is_absolute():
             config_path = Path.cwd() / config_path
         if not config_path.exists():
-            raise FileNotFoundError(f"VEDP-GAN generation config가 없습니다: {config_path}")
+            raise FileNotFoundError(f"VEDP-GAN generation config not found: {config_path}")
         with open(config_path, "rb") as file:
             config_dict = tomllib.load(file)
         config_flat = vedp_gan_utils.flatten_config_dict(config_dict)
         if config_flat.get("enable_best_on_test_selection") is not True:
-            raise ValueError("VEDP-GAN 일반 generation은 checkpoint_selection.enable_best_on_test_selection=true가 필수입니다.")
+            raise ValueError("Standard VEDP-GAN generation requires checkpoint_selection.enable_best_on_test_selection=true.")
 
         base_dir = os.path.join(self.model_exp_dir, self.data_name)
         run_dirs = {
@@ -177,7 +177,7 @@ class Generator():
 
     def _require_path(self, path, label):
         if not os.path.exists(path):
-            raise FileNotFoundError(f"{label}이 없습니다: {path}")
+            raise FileNotFoundError(f"{label} not found: {path}")
         return path
 
     def _set_config_value(self, config, key, value):
@@ -444,13 +444,13 @@ class Generator():
         def wrapper(self, *args, **kwargs):
             verbose = kwargs.get('verbose', self.verbose)
             if verbose:
-                print(self._banner(f" {self.model_name} 학습 시작 "))
+                print(self._banner(f" {self.model_name} training started "))
 
             with self._suppress_output(enabled=not verbose):
                 result = func(self, *args, **kwargs)
 
             if verbose:
-                print(self._banner(f" {self.model_name} 학습 종료 "))
+                print(self._banner(f" {self.model_name} training finished "))
             return result
         return wrapper
 
@@ -459,27 +459,27 @@ class Generator():
         def wrapper(self, *args, **kwargs):
             verbose = kwargs.get('verbose', self.verbose)
             if verbose:
-                print(self._banner(f" {self.model_name} 데이터 생성 시작 "))
+                print(self._banner(f" {self.model_name} data generation started "))
 
             with self._suppress_output(enabled=not verbose):
                 result = func(self, *args, **kwargs)
 
             if verbose:
-                print(self._banner(f" {self.model_name} 데이터 생성 종료 "))
+                print(self._banner(f" {self.model_name} data generation finished "))
                 print()
             return result
         return wrapper
     
     @train_decorator
     def train(self, verbose=True):
-        ''' 모델 학습 '''
+        ''' Model training '''
         if self.model_name == 'CTGAN':
             from generation.ctgan_checkpoint import CheckpointableCTGANSynthesizer
 
             selection_flat = flatten_config(load_model_selection_config("CTGAN"))
             checkpoints_dir = os.path.join(self.model_exp_dir, self.data_name, "checkpoints")
             ctgan_epochs = selection_flat.get("epochs", 1000)
-            # 데이터 & 모델 불러오기
+            # Load data and model
             generator = CheckpointableCTGANSynthesizer(
                 metadata=self.data_loader.metadata,
                 enforce_min_max_values=True,
@@ -490,7 +490,7 @@ class Generator():
                 candidate_start_epoch=min(ctgan_epochs, selection_flat.get("selection_candidate_start_epoch", 501)),
                 selection_save_every=selection_flat.get("selection_save_every", 50))
             generator.fit(self.data_loader.train_data)
-            # 모델 저장
+            # Save model
             generator.save(os.path.join(self.model_exp_dir, f'{self.data_name}_{self.model_name}.pkl'))
             self._run_best_checkpoint_selection()
             
@@ -612,17 +612,17 @@ class Generator():
             self.data_name,
             f"{self.data_name}.py")
         if not os.path.exists(config_path):
-            raise FileNotFoundError(f"STaSy config 파일이 없습니다: {config_path}")
+            raise FileNotFoundError(f"STaSy config file not found: {config_path}")
 
         module_name = f"_stasy_config_{self.data_name}"
         spec = importlib.util.spec_from_file_location(module_name, config_path)
         if spec is None or spec.loader is None:
-            raise ImportError(f"STaSy config import 실패: {config_path}")
+            raise ImportError(f"failed to import STaSy config: {config_path}")
 
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         if not hasattr(module, 'get_config'):
-            raise AttributeError(f"STaSy config에 get_config 함수가 없습니다: {config_path}")
+            raise AttributeError(f"STaSy config does not define get_config: {config_path}")
         return module.get_config()
 
     def _build_codi_flags(self, seed):
@@ -664,7 +664,7 @@ class Generator():
 
     @inference_decorator
     def inference(self, seed=42, save=True, output_path=None, verbose=True):
-        # 합성 데이터 생성
+        # Generate synthetic data
         file_path = output_path or os.path.join(
             self.model_save_dir,
             f"{self.data_name}_{self.model_name}_syn.csv")
@@ -694,7 +694,7 @@ class Generator():
                     ])
 
             if save and verbose:
-                print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
+                print(f"✔️ {os.path.basename(file_path)} created!")
             return synthetic_data
 
         if self.model_name == 'TabDDPM':
@@ -718,7 +718,7 @@ class Generator():
                 verbose=verbose,
             )
             if save and verbose:
-                print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
+                print(f"✔️ {os.path.basename(file_path)} created!")
             return synthetic_data
 
         if self.model_name == 'STaSy':
@@ -742,7 +742,7 @@ class Generator():
                 verbose=verbose,
             )
             if save and verbose:
-                print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
+                print(f"✔️ {os.path.basename(file_path)} created!")
             return synthetic_data
 
         if self.model_name == 'CoDi':
@@ -760,7 +760,7 @@ class Generator():
                 verbose=verbose,
             )
             if save and verbose:
-                print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
+                print(f"✔️ {os.path.basename(file_path)} created!")
             return synthetic_data
 
         if self.model_name == 'AutoDiff':
@@ -789,7 +789,7 @@ class Generator():
                 verbose=verbose,
             )
             if save and verbose:
-                print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
+                print(f"✔️ {os.path.basename(file_path)} created!")
             return synthetic_data
 
         if self.model_name == 'TTGAN':
@@ -818,7 +818,7 @@ class Generator():
                 verbose=verbose,
             )
             if save and verbose:
-                print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
+                print(f"✔️ {os.path.basename(file_path)} created!")
             return synthetic_data
 
         if self.model_name == 'VEDP-GAN':
@@ -846,7 +846,7 @@ class Generator():
                 verbose=verbose,
             )
             if save and verbose:
-                print(f"✔️ {os.path.basename(file_path)} 생성 완료!")
+                print(f"✔️ {os.path.basename(file_path)} created!")
             return synthetic_data
 
-        raise ValueError(f"지원되지 않는 모델입니다: {self.model_name}")
+        raise ValueError(f"unsupported model: {self.model_name}")

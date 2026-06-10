@@ -1,4 +1,4 @@
-"""`ave.py` 의미를 유지하는 residual VEDP_GAN 모델 정의."""
+"""Residual VEDP_GAN model definition preserving the meaning of `ave.py`."""
 
 import os
 import tomllib
@@ -18,7 +18,7 @@ VERSION_MAP = {"VEDP-GAN": "ave"}
 
 
 class VEDP_GANConfig:
-    """`ave.py` 기본 철학에 residual skeleton을 얹은 설정."""
+    """Configuration that adds a residual skeleton to the base philosophy of `ave.py`."""
 
     def __init__(self):
         self.epochs = 1000
@@ -85,7 +85,7 @@ class VEDP_GANConfig:
     def load_config(self, config_path, verbose=True):
         if not os.path.exists(config_path):
             if verbose:
-                tqdm.write(f"[WARN] config.toml not found: {config_path} | default config 사용")
+                tqdm.write(f"[WARN] config.toml not found: {config_path} | using default config")
             return
 
         with open(config_path, "rb") as file:
@@ -112,7 +112,7 @@ def _make_linear(in_dim, out_dim, use_spectral_norm=False):
 
 
 class ResidualMLPBlock(nn.Module):
-    """LayerNorm 기반 residual MLP block."""
+    """LayerNorm-based residual MLP block."""
 
     def __init__(self, hidden_dim, use_spectral_norm=False):
         super().__init__()
@@ -147,7 +147,7 @@ class MLPProjector(nn.Module):
 
 
 class Encoder(nn.Module):
-    """Input feature를 latent z0로 압축."""
+    """Compress input features into latent z0."""
 
     def __init__(self, input_dim, latent_dim, hidden_dim=128, num_blocks=2, use_residual=True):
         super().__init__()
@@ -186,7 +186,7 @@ class Encoder(nn.Module):
 
 
 class Diffusion(nn.Module):
-    """Forward noising만 담당하는 diffusion module."""
+    """Diffusion module responsible only for forward noising."""
 
     def __init__(self, timesteps, beta_start=1e-4, beta_end=0.02):
         super().__init__()
@@ -213,7 +213,7 @@ class Diffusion(nn.Module):
 
 
 class Generator(nn.Module):
-    """`ave.py` 의미를 따르는 조건부 latent generator."""
+    """Conditional latent generator following the meaning of `ave.py`."""
 
     def __init__(self, noise_dim, latent_dim, num_classes, timesteps,
                  hidden_dim=128, num_blocks=2, t_emb_dim=16, y_emb_dim=4):
@@ -240,7 +240,7 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    """`ave.py` 의미를 따르는 AC-GAN 형태 discriminator."""
+    """AC-GAN-style discriminator following the meaning of `ave.py`."""
 
     def __init__(self, latent_dim, num_classes, timesteps,
                  hidden_dim=128, num_blocks=2, t_emb_dim=16, y_emb_dim=4,
@@ -271,7 +271,7 @@ class Discriminator(nn.Module):
 
 
 class DecoderMixed(nn.Module):
-    """연속형과 이산형 feature를 동시에 복원하는 decoder."""
+    """Decoder that restores continuous and discrete features together."""
 
     def __init__(self, latent_dim, con_dim, bin_dim, hidden_dim=128,
                  num_blocks=2, use_residual=True, use_two_layer_heads=True,
@@ -368,7 +368,7 @@ class DecoderMixed(nn.Module):
 
 
 class VEDP_GAN(nn.Module):
-    """`ave.py` 의미를 유지하는 residual VEDP_GAN."""
+    """Residual VEDP_GAN preserving the meaning of `ave.py`."""
 
     def __init__(self, con_dim, bin_dim, config, num_classes):
         super().__init__()

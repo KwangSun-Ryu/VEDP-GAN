@@ -99,7 +99,7 @@ def _synthesize(model, n_samples, label_idx, version_key, device):
 
 def sample(args, loaders, run_dirs, ckpt_path=None, model=None, session=None, return_frame=False, reporter=None, verbose=True):
     if args.model_name not in VERSION_MAP:
-        raise ValueError("지원하지 않는 VEDP-GAN 버전이다.")
+        raise ValueError("Unsupported VEDP-GAN version.")
 
     device = _resolve_device(args)
     config_flat = normalize_bounded_head_config(flatten_config_dict(getattr(args, "config_dict", {}) or {}))

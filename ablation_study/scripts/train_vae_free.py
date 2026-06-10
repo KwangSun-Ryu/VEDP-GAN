@@ -1,4 +1,4 @@
-"""VAE 제거 baseline 학습 스크립트."""
+"""VAE-free baseline training script."""
 
 import copy
 import os

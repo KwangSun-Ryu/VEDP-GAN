@@ -60,8 +60,8 @@ class GeneralTransformer(Transformer):
         data_t = []
         self.output_info = []
         if not self.meta:
-            # 학습 단계에서 컬럼이 전혀 없었던 경우(연속형·범주형 모두 0개)
-            # 빈 배열을 바로 반환하여 np.concatenate 오류를 방지한다.
+            # If there were no columns during training (both continuous and categorical are zero)
+            # Return an empty array immediately to avoid np.concatenate errors.
             return np.zeros((len(data), 0), dtype=np.float32)
         for id_, info in enumerate(self.meta):
             col = data[:, id_]
@@ -80,15 +80,15 @@ class GeneralTransformer(Transformer):
                 self.output_info.append((info['size'], 'softmax'))
 
         if not data_t:
-            # 위 가드에도 불구하고 예외적으로 data_t가 비어 있을 때
-            # (예: 변환 대상이 없는 특수 케이스) 동일하게 빈 배열을 돌려준다.
+            # If data_t is exceptionally empty despite the guard above
+            # (for example, special cases with no transform target), return an empty array as well.
             return np.zeros((len(data), 0), dtype=np.float32)
 
         return np.concatenate(data_t, axis=1).astype(np.float32)
 
     def inverse_transform(self, data):
         if not self.meta:
-            # 복원할 메타 정보가 없으면 입력 크기에 맞춘 빈 배열을 반환한다.
+            # If there is no metadata to restore, return an empty array matching the input size.
             return np.zeros((len(data), 0), dtype=np.float32)
 
         data_t = np.zeros([len(data), len(self.meta)])

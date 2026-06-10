@@ -1,4 +1,4 @@
-"""`ave.py` 의미를 유지하는 residual VEDP_GAN 샘플링."""
+"""Residual VEDP_GAN sampling that preserves the meaning of `ave.py`."""
 
 import os
 
@@ -105,7 +105,7 @@ def sample(
     output_path=None,
 ):
     if args.model_name not in VERSION_MAP:
-        raise ValueError("지원하지 않는 VEDP-GAN 버전이다.")
+        raise ValueError("Unsupported VEDP-GAN version.")
 
     device = _resolve_device(args)
     config_flat = normalize_bounded_head_config(flatten_config_dict(getattr(args, "config_dict", {}) or {}))

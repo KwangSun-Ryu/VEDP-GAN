@@ -1,4 +1,4 @@
-"""VEDP-GAN GitHub package 통합 CLI."""
+"""Unified CLI for the VEDP-GAN GitHub package."""
 
 import argparse
 import os
@@ -20,8 +20,8 @@ COMMAND_MODULES = {
 
 def build_parser():
     parser = argparse.ArgumentParser(description="VEDP-GAN unified runner")
-    parser.add_argument("command", choices=sorted(COMMAND_MODULES), help="실행할 작업")
-    parser.add_argument("args", nargs=argparse.REMAINDER, help="하위 CLI 인자")
+    parser.add_argument("command", choices=sorted(COMMAND_MODULES), help="Command to run")
+    parser.add_argument("args", nargs=argparse.REMAINDER, help="Subcommand CLI arguments")
     return parser
 
 

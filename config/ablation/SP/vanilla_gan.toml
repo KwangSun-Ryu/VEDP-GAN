@@ -1,31 +1,31 @@
-## conditional feature-space Vanilla GAN 기본 설정
+## Default conditional feature-space Vanilla GAN settings
 [runtime]
 batch_size = 256
 num_workers = 2
 bin_threshold = 0.5
-## synthetic CSV를 만들 때 target 분포를 어떻게 맞출지 결정
-## - "prior": 원본 데이터 전체 target 분포를 따라 생성
-## - "balanced": class 개수를 균등하게 맞춰 생성
-## - 학습 minibatch sampler와는 별개 옵션
+## Controls how the target distribution is matched when creating synthetic CSV files
+## - "prior": generate according to the full original target distribution
+## - "balanced": generate with equal class counts
+## - independent from the training minibatch sampler
 sampling_strategy = "balanced"
 
 [evaluation]
-## KSComplement 내부 SciPy ks_2samp p-value 계산 방식
-## - "asymp": exact 계산 실패 warning 방지
-## - "auto"/"exact": SciPy 기본 자동/정확 계산
+## SciPy ks_2samp p-value calculation mode inside KSComplement
+## - "asymp": avoids warnings from failed exact calculations
+## - "auto"/"exact": SciPy default automatic/exact calculation
 ks_complement_method = "asymp"
 
 [train]
 epochs = 7800
 lr = 1e-3
 
-## checkpoint selection 설정
+## Checkpoint selection settings
 [checkpoint_selection]
 enable_best_on_test_selection = true
 selection_save_every = 5
 ## - "stable_fidelity_score": `KSC_full`/`TVC_full` gate + weighted score + neighbor stable score
-## - "best_auc_test": AUC_test가 가장 높은 checkpoint 선택
-## - "gated_best_auc_test": `KSC_full`/`TVC_full` gate 통과 후보 중 AUC_test가 가장 높은 checkpoint 선택
+## - "best_auc_test": select the checkpoint with the highest AUC_test
+## - "gated_best_auc_test": select the candidate with the highest AUC_test among checkpoints passing the `KSC_full`/`TVC_full` gate
 checkpoint_selection_policy = "gated_best_auc_test"
 checkpoint_selection_use_fidelity_gate = true
 checkpoint_selection_ksc_gate_delta = 0.03
@@ -51,8 +51,8 @@ label_smoothing = 0.05
 use_lr_scheduler = true
 use_r1_penalty = true
 r1_weight = 10.0
-## 학습 minibatch에서 minority class starvation을 줄이기 위한 자동 quota sampler
-## natural이면 기존 shuffle을 유지하고, auto_minority_quota는 조건 충족 시 batch별 최소 minority 개수를 보장함
+## Automatic quota sampler to reduce minority-class starvation in training minibatches
+## natural keeps the existing shuffle, while auto_minority_quota enforces a minimum minority count per batch when conditions are met
 batch_sampling_strategy = "auto_minority_quota"
 minority_quota_trigger_ratio = 0.03
 minority_quota_trigger_expected = 8.0

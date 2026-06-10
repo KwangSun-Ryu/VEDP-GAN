@@ -1,4 +1,4 @@
-"""VAE 제거 baseline 샘플링."""
+"""VAE-free baseline sampling."""
 
 import os
 

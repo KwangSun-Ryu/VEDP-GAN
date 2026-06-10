@@ -1,4 +1,4 @@
-"""Vanilla GAN baseline 학습 스크립트."""
+"""Vanilla GAN baseline training script."""
 
 import copy
 import os

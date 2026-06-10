@@ -1,4 +1,4 @@
-"""TTGAN 실험 설정을 TOML에서 불러오기 위한 헬퍼"""
+"""Helper for loading TTGAN experiment settings from TOML."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ import tomllib
 
 
 class TTGANConfig:
-    """TTGAN 학습/샘플링 설정을 관리함"""
+    """Manage TTGAN training/sampling settings."""
 
     def __init__(self):
-        # 기본 학습 파라미터
+        # Basic training parameters
         self.epochs = 2000
         self.embedding_dim = 128
         self.generator_num_layers = 6
@@ -25,7 +25,7 @@ class TTGANConfig:
         self.pac = 10
         self.cuda = True
 
-        # 고급 학습 옵션
+        # Advanced training options
         self.gradient_penalty_lambda = 10.0
         self.cond_loss_weight = 1.0
         self.use_dynamic_weights = False
@@ -43,12 +43,12 @@ class TTGANConfig:
         self.label_smoothing = 0.05
         self.classwise_training = False
 
-        # 샘플링 옵션
+        # Sampling options
         self.enable_sampling_noise = True
         self.sampling_noise_std_ratio = 0.01
         self.use_discretized_rounding_logic = True
 
-        # 기타
+        # Miscellaneous
         self.use_residual_discriminator = False
         self.discriminator_residual_layers = 0
         self.discriminator_residual_dropout = 0.3
@@ -57,22 +57,22 @@ class TTGANConfig:
         return os.path.join(args.exp_dir, 'TTGAN', 'config.toml')
 
     def load_from_exp(self, args, verbose=True):
-        """exp 디렉터리의 config.toml을 읽어 설정을 갱신함"""
+        """Read config.toml from the exp directory and update settings."""
         path = self._toml_path(args)
         if not os.path.exists(path):
             if verbose:
-                print(f"⚠️ {path}가 존재하지 않아 기본 설정으로 학습을 진행합니다.")
+                print(f"⚠️ {path} does not exist; training with default settings.")
             return
         with open(path, 'rb') as fp:
             if verbose:
-                print(f"✅️ {path}에서 설정을 불러와 학습을 진행합니다.")
+                print(f"✅️ {path} loaded settings; starting training.")
             config = tomllib.load(fp)
         for key, value in config.items():
             if hasattr(self, key):
                 setattr(self, key, value)
 
     def to_synth_kwargs(self):
-        """TTGANSynthesizer에 전달할 학습 관련 파라미터 dict"""
+        """Training parameter dictionary passed to TTGANSynthesizer."""
         return {
             'embedding_dim': self.embedding_dim,
             'generator_num_layers': self.generator_num_layers,
@@ -107,7 +107,7 @@ class TTGANConfig:
         }
 
     def sampling_options(self):
-        """샘플링 단계에서 사용할 옵션 dict"""
+        """Option dictionary used during sampling."""
         return {
             'enable_sampling_noise': self.enable_sampling_noise,
             'sampling_noise_std_ratio': self.sampling_noise_std_ratio,

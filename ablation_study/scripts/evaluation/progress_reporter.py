@@ -1,4 +1,4 @@
-"""평가 단계 progress wrapper."""
+"""Progress wrapper for evaluation stages."""
 
 from ablation_study.scripts.progress import NullProgressReporter, ProgressReporter
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""STaSy용 변환 스크립트.
+"""Data conversion script for STaSy.
 
-`data/` 디렉터리에 준비된 CSV, 컬럼 메타 데이터, manifest를 읽어들여
-STaSy 학습/샘플링 파이프라인이 기대하는 `.npz` 및 `.json` 포맷으로 변환한다.
+Read CSV files, column metadata, and the manifest prepared under the `data/` directory,
+and convert them into the `.npz` and `.json` formats expected by the STaSy training/sampling pipeline.
 
-예시:
+Example:
     python scripts/convert_my_data.py \
         --input-config data/datasets_info.json \
         --metadata-dir data/cols_info \
@@ -97,14 +97,14 @@ def encode_with_mapping(series: pd.Series, mapping: Mapping[str, int]) -> np.nda
     encoded = coerced.map(mapping)
     if encoded.isnull().any():
         missing = coerced[encoded.isnull()].unique().tolist()
-        raise ValueError(f"매핑되지 않은 범주 값이 존재합니다: {missing}")
+        raise ValueError(f"unmapped categorical values exist: {missing}")
     return encoded.to_numpy(dtype=np.int64)
 
 
 def ensure_columns_exist(df: pd.DataFrame, columns: Iterable[str], dataset: str) -> None:
     missing = [col for col in columns if col not in df.columns]
     if missing:
-        raise KeyError(f"'{dataset}' 데이터에서 필요한 columns이 누락되었습니다: {missing}")
+        raise KeyError(f"'{dataset}' data is missing required columns: {missing}")
 
 
 def infer_split_column(df: pd.DataFrame) -> Optional[str]:
@@ -125,11 +125,11 @@ def prepare_splits(
         train_df = df.loc[split_series == "train"].drop(columns=split_col)
         test_df = df.loc[split_series == "test"].drop(columns=split_col)
         if train_df.empty or test_df.empty:
-            raise ValueError("split 컬럼에 train/test 정보가 충분하지 않습니다.")
+            raise ValueError("The split column does not contain enough train/test information.")
         return train_df.reset_index(drop=True), test_df.reset_index(drop=True)
 
     if not 0 < test_ratio < 1:
-        raise ValueError("split 컬럼이 없을 경우 test-ratio 는 (0, 1) 범위여야 합니다.")
+        raise ValueError("When the split column is missing, test-ratio must be in the (0, 1) range.")
 
     shuffled = df.sample(frac=1.0, random_state=seed).reset_index(drop=True)
     cut = max(1, int(len(shuffled) * test_ratio))
@@ -166,7 +166,7 @@ def convert_dataset(
     test_ratio: float,
 ) -> None:
     if not csv_path.exists():
-        raise FileNotFoundError(f"CSV 파일을 찾을 수 없습니다: {csv_path}")
+        raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
     df = pd.read_csv(csv_path)
     split_col = infer_split_column(df)
@@ -178,7 +178,7 @@ def convert_dataset(
 
     unknown = [col for col in expected_cols if metadata and col not in metadata]
     if unknown:
-        print(f"[WARN] {cfg.name}: 메타데이터에 없는 컬럼이 있습니다: {unknown}")
+        print(f"[WARN] {cfg.name}: metadata is missing columns: {unknown}")
 
     for col in cfg.continuous:
         if col in work_df.columns:
@@ -198,7 +198,7 @@ def convert_dataset(
     train_df = train_df.dropna().reset_index(drop=True)
     test_df = test_df.dropna().reset_index(drop=True)
     if train_df.empty or test_df.empty:
-        raise ValueError("결측치 제거 이후 train/test 데이터가 비었습니다.")
+        raise ValueError("Train/test data is empty after removing missing values.")
 
     combined_df = pd.concat([train_df, test_df], axis=0, ignore_index=True)
 
@@ -380,47 +380,47 @@ def get_config():
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     default_root = Path(__file__).resolve().parent.parent / "data"
-    parser = argparse.ArgumentParser(description="STaSy용 데이터 변환 스크립트")
+    parser = argparse.ArgumentParser(description="Data conversion script for STaSy")
     parser.add_argument(
         "--input-config",
         type=Path,
         default=default_root / "datasets_info.json",
-        help="datasets_info.json 경로",
+        help="datasets_info.json path",
     )
     parser.add_argument(
         "--metadata-dir",
         type=Path,
         default=default_root / "cols_info",
-        help="컬럼 메타데이터 디렉터리",
+        help="column metadata directory",
     )
     parser.add_argument(
         "--data-dir",
         type=Path,
         default=default_root / "original_data",
-        help="원본 CSV 데이터 디렉터리",
+        help="original CSV data directory",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("tabular_datasets_converted"),
-        help="변환 결과를 저장할 루트 디렉터리",
+        help="root directory for converted outputs",
     )
     parser.add_argument(
         "--datasets",
         nargs="*",
-        help="변환할 데이터셋 이름 리스트 (생략 시 manifest 전체)",
+        help="dataset names to convert (if omitted, convert the full manifest)",
     )
     parser.add_argument(
         "--seed",
         type=int,
         default=42,
-        help="split 컬럼이 없을 때 사용할 난수 시드",
+        help="random seed used when the split column is missing",
     )
     parser.add_argument(
         "--test-ratio",
         type=float,
         default=0.3,
-        help="split 컬럼이 없을 때 사용할 test 비율" 
+        help="test ratio used when the split column is missing" 
     )
     
     return parser.parse_args(argv)
@@ -456,7 +456,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             print(f"[FAIL] {dataset_name}: {exc}")
 
     if not converted_any:
-        print("변환된 데이터셋이 없습니다. 인자를 확인하세요.")
+        print("Converted dataset not found. Check the arguments.")
         return 1
     return 0
 

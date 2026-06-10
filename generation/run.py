@@ -1,6 +1,6 @@
-''' 데이터셋을 불러와 모델 학습 후, 합성 데이터 생성 '''
+''' Load datasets, train models, and generate synthetic data '''
 
-from .generator import Generator     # 패키지 개념으로 받아들이기
+from .generator import Generator     # import as a package module
 from utils import check_time, GEN_MODEL_NAME
 from tqdm.auto import tqdm
 
@@ -11,7 +11,7 @@ import pandas as pd
 def load_dataset_names(data_dir):
     info_path = os.path.join(data_dir, 'datasets_info.json')
     if not os.path.exists(info_path):
-        raise FileNotFoundError(f"datasets_info.json이 존재하지 않습니다: {info_path}")
+        raise FileNotFoundError(f"datasets_info.json does not exist: {info_path}")
     with open(info_path, 'r', encoding='utf-8') as file:
         return list(json.load(file).keys())
 
@@ -24,27 +24,27 @@ def validate_dataset_names(data_names, data_dir):
     missing = [name for name in data_names if name not in dataset_names]
     if missing:
         raise ValueError(
-            f"--data-name에 현재 --data-dir 기준으로 존재하지 않는 데이터셋이 포함되어 있습니다: {missing}")
+            f"--data-name contains datasets that do not exist under the current --data-dir: {missing}")
 
     return data_names
 
 
 def create_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, nargs='+', help='데이터셋 이름')
-    parser.add_argument('--model-name', type=str, choices=GEN_MODEL_NAME, nargs='+', help='생성 모델 이름')
-    parser.add_argument('--data-dir', type=str, default='./data', help='데이터셋 경로')
-    parser.add_argument('--exp-dir', type=str, default='./exp', help='모델 가중치, 각종 실험 파일 저장 경로')
-    parser.add_argument('--save-dir', type=str, default='./output', help='합성 데이터 저장 경로')
-    parser.add_argument('--log-dir', type=str, default='./result', help='실험에 필요한 결과 저장 경로')
-    parser.add_argument('--seed', type=int, default=42, help='SEED 값 지정')
+    parser.add_argument('--data-name', type=str, nargs='+', help='Dataset name')
+    parser.add_argument('--model-name', type=str, choices=GEN_MODEL_NAME, nargs='+', help='Generative model name')
+    parser.add_argument('--data-dir', type=str, default='./data', help='dataset path')
+    parser.add_argument('--exp-dir', type=str, default='./exp', help='Path for model weights and experiment files')
+    parser.add_argument('--save-dir', type=str, default='./output', help='Synthetic data output path')
+    parser.add_argument('--log-dir', type=str, default='./result', help='Result output path for experiments')
+    parser.add_argument('--seed', type=int, default=42, help='Seed value')
     parser.add_argument('--sampling-strategy', type=str, choices=['prior', 'balanced'], default='prior',
-                        help='합성 데이터 class 분포 전략')
+                        help='Synthetic data class distribution strategy')
     parser.add_argument('--config', type=str, default='./config/generation/vedp_gan.toml',
-                        help='VEDP-GAN 학습/샘플링 TOML config 경로')
+                        help='VEDP-GAN train/sampling TOML config path')
     parser.add_argument('--eval-model-config-dir', type=str, default='./config/prediction',
-                        help='checkpoint selection 평가 모델 config 경로')
-    parser.add_argument('--verbose-model', action='store_true', help='모델 내부 진행 로그 출력 여부')
+                        help='Evaluation model config path for checkpoint selection')
+    parser.add_argument('--verbose-model', action='store_true', help='Whether to print verbose model progress logs')
 
     args = parser.parse_args()
     args.data_name = validate_dataset_names(args.data_name, args.data_dir)
@@ -60,10 +60,10 @@ def main():
     log_dir = os.path.join(args.log_dir, 'time_complexity')
     os.makedirs(log_dir, exist_ok=True)
 
-    # 시간 측정 데이터 프레임 생성
+    # Create the time-measurement DataFrame
     results = pd.DataFrame({'data_name': list(args.data_name)})
 
-    # 오류 기록할 경로 지정
+    # Set the error log path
     error_records = []
     error_log_path = os.path.join(log_dir, 'failed_runs.jsonl')
     if os.path.exists(error_log_path):
@@ -73,7 +73,7 @@ def main():
 
     with tqdm(total=total_steps, colour='#1ab6ff', dynamic_ncols=True) as progress:
         for model_name in args.model_name:
-            time_data_map = {}  # data_name에 시간 복잡도를 넣기 위한 mapping dict
+            time_data_map = {}  # mapping dict for storing time complexity by data_name
 
             for data_name in args.data_name:
                 completed_steps = 0
@@ -129,7 +129,7 @@ def main():
                         progress.set_postfix_str(f'model={model_name} data={data_name} stage=skip')
                         progress.update(remaining_steps)
 
-            # 모델 별 column 추가
+            # Add one column per model
             results[model_name] = results['data_name'].map(time_data_map)
 
         output_path = os.path.join(log_dir, 'time_complexity_summary.csv')

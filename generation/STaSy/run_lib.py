@@ -49,7 +49,7 @@ LOG_FORMAT = '%(levelname)s - %(filename)s - %(asctime)s - %(message)s'
 
 
 def set_random_seed(seed: int):
-    """PyTorch/NumPy/Python 랜덤 시드를 고정"""
+    """Fix PyTorch/NumPy/Python random seeds."""
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
@@ -58,7 +58,7 @@ def set_random_seed(seed: int):
     np.random.seed(seed)
     random.seed(seed)
 
-## 읽기 전용/잠금 파일도 지우기 위한 헬퍼
+## Helper for deleting read-only or locked files
 def _force_remove(func, path, exc_info):
     import stat
     os.chmod(path, stat.S_IWRITE)
@@ -71,7 +71,7 @@ def prepare_run_dir(exp_dir: str, dataset_name: str, init_folder: bool = False) 
     run_dir = Path(exp_dir) / dataset_name
     if run_dir.exists() and init_folder:
         shutil.rmtree(run_dir, onerror=_force_remove)
-        logging.info("기존 실험 폴더(%s)를 초기화했습니다.", run_dir)
+        logging.info("Reset existing experiment directory (%s).", run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     return str(run_dir)
 
@@ -294,7 +294,7 @@ def load_manifest_target(data_dir, dataset_name):
         info = manifest.get(dataset_name)
         return info.get('target') if info else None
     except json.JSONDecodeError:
-        logging.warning("datasets_info.json 을 파싱하지 못했습니다. 기본 레이블을 사용합니다.")
+        logging.warning("Could not parse datasets_info.json. Using default labels.")
         return None
 
 
@@ -305,7 +305,7 @@ def load_categorical_mappings(data_dir, dataset_name):
     try:
         payload = json.loads(mapping_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
-        logging.warning("mappings.json 을 파싱하지 못했습니다. 변환을 건너뜁니다.")
+        logging.warning("Could not parse mappings.json. Skipping conversion.")
         return {}
 
     categorical = payload.get("categorical") or {}
@@ -442,7 +442,7 @@ def sample(config, data_dir, exp_dir, save_dir, is_balanced=False, seed=42, save
     column_names = derive_column_order(meta, train_inverse.shape[1], feature_cols)
     if feature_cols and len(feature_cols) != len(column_names):
         logging.warning(
-            "원본 CSV 열({:d}개)과 변환 열({:d}개)이 달라 meta 순서를 사용합니다.".format(len(feature_cols), len(column_names)))
+            "Original CSV columns ({:d}) and converted columns ({:d}) differ; using metadata order.".format(len(feature_cols), len(column_names)))
     aligned_cols = list(column_names)
 
     categorical_mappings = load_categorical_mappings(data_dir, dataset_name)
@@ -546,7 +546,7 @@ def sample(config, data_dir, exp_dir, save_dir, is_balanced=False, seed=42, save
         if best_checkpoint.exists():
             state = restore_checkpoint(str(best_checkpoint), state, config.device)
         else:
-            logging.warning("No checkpoint found at {}. 최신 체크포인트로 샘플링합니다.".format(best_checkpoint))
+            logging.warning("No checkpoint found at {}. Sampling from the latest checkpoint.".format(best_checkpoint))
         ema.copy_to(score_model.parameters())
         return score_model
 
@@ -644,7 +644,7 @@ def sample(config, data_dir, exp_dir, save_dir, is_balanced=False, seed=42, save
         elif save_dir is not None:
             save_path = Path(save_dir) / f"{dataset_name}_STaSy_syn.csv"
         else:
-            raise ValueError("save=True 인 경우 save_dir 또는 output_path가 필요합니다.")
+            raise ValueError("save_dir or output_path is required when save=True.")
 
         save_path.parent.mkdir(parents=True, exist_ok=True)
         generated_df.to_csv(save_path, index=False)

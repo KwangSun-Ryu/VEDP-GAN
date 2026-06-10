@@ -162,7 +162,7 @@ def _train_single_run(
 
 
 def _build_model_pair(con_dim, dis_dim, num_class, ref_shape, FLAGS, device):
-    """학습 단계와 동일한 구조를 재구성한다."""
+    """Rebuild the same structure used during training."""
 
     FLAGS.input_size = con_dim
     FLAGS.cond_size = dis_dim
@@ -198,7 +198,7 @@ def _build_model_pair(con_dim, dis_dim, num_class, ref_shape, FLAGS, device):
 
 
 def _mapping_key(value):
-    """mappings.json 키와 일치하도록 값을 문자열로 변환한다."""
+    """Convert values to strings that match mappings.json keys."""
 
     if isinstance(value, (np.integer, int)):
         return str(int(value))
@@ -208,7 +208,7 @@ def _mapping_key(value):
 
 
 def _apply_mappings_to_df(df, mappings, class_key):
-    """mappings.json 정보를 사용해 범주형 값을 복원한다."""
+    """Restore categorical values using mappings.json."""
 
     target_info = mappings.get('target', {})
     target_col = target_info.get('column')
@@ -245,7 +245,7 @@ def _generate_class_samples(
     FLAGS,
     device,
 ):
-    """특정 클래스 모델로부터 합성 데이터를 생성한다."""
+    """Generate synthetic data from a class-specific model."""
 
     column_names = [col['name'] for col in column_defs]
     column_count = len(column_defs)
@@ -308,13 +308,13 @@ def _generate_class_samples(
 
 def _check_generated_data(df, mappings, class_sizes):
     """
-    생성된 데이터의 target 열이 올바른 라벨 분포를 따르는지 검사하는 함수
+    Function that checks whether the target column of generated data follows the expected label distribution
 
-    예) class_0 전용 모델 → 생성된 모든 샘플의 target 값이 0 이어야 함
-        class_1 전용 모델 → 생성된 모든 샘플의 target 값이 1 이어야 함
+    Example: class_0-specific model -> every generated target value must be 0
+        class_1-specific model -> every generated target value must be 1
     """
     label_to_class = {0: 'class_0', 1: 'class_1'}
-    target_col = mappings['target']['column']  # target 컬럼명 가져오기
+    target_col = mappings['target']['column']  # get the target column name
 
     vals = df[target_col].value_counts()
 
@@ -322,7 +322,7 @@ def _check_generated_data(df, mappings, class_sizes):
         expected = class_sizes[label_to_class[int(label)]]
         if expected != count:
             raise ValueError(
-                f"❌ target 값 불일치: {label_to_class[int(label)]} "
+                f"❌ target value mismatch: {label_to_class[int(label)]} "
                 f"(expected {expected}, got {count})" )
 
 
@@ -352,12 +352,12 @@ def train(FLAGS):
     num_class = np.array([info[0] for info in transformer_dis.output_info])
 
     if FLAGS.mode == 'eval':
-        raise ValueError('평가 기능은 삭제되었습니다. 학습 모드만 지원합니다.')
+        raise ValueError('Evaluation mode has been removed. Only training mode is supported.')
 
     if FLAGS.is_balanced:
         for class_key in sorted(train_con_data.keys()):
             if class_key not in train_dis_data:
-                raise KeyError(f'{class_key} 데이터가 범주형 배열에 없습니다.')
+                raise KeyError(f'{class_key} data is missing from the categorical array.')
 
             suffix = class_key.split('_')[-1]
             checkpoint_name = f'checkpoint_class_{suffix}.pt'
@@ -388,7 +388,7 @@ def train(FLAGS):
 def sample(FLAGS, save=True, output_path=None, verbose=True):
 
     if not FLAGS.is_balanced:
-        raise ValueError('현재 샘플링은 is_balanced=True 환경에서만 지원됩니다.')
+        raise ValueError('Current sampling supports only is_balanced=True.')
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     data_dir = os.path.join(FLAGS.data_dir, FLAGS.data)
@@ -410,7 +410,7 @@ def sample(FLAGS, save=True, output_path=None, verbose=True):
 
     original_size = config.get('original_data_size')
     if original_size is None:
-        raise ValueError(f"original_data_size 정보가 {FLAGS.data}.json에 없습니다.")
+        raise ValueError(f"original_data_size is missing in {FLAGS.data}.json.")
 
     columns_order = config.get('columns_order', [col['name'] for col in config['columns']])
 
@@ -451,7 +451,7 @@ def sample(FLAGS, save=True, output_path=None, verbose=True):
         suffix = class_key.split('_')[-1]
         checkpoint_path = os.path.join(exp_dir, f'checkpoint_class_{suffix}.pt')
         if not os.path.exists(checkpoint_path):
-            raise FileNotFoundError(f'{checkpoint_path} 파일을 찾을 수 없습니다.')
+            raise FileNotFoundError(f'{checkpoint_path} file not found.')
 
         ref_shape = ref_shapes.get(class_key, next(iter(ref_shapes.values())))
         class_df = _generate_class_samples(
@@ -476,11 +476,11 @@ def sample(FLAGS, save=True, output_path=None, verbose=True):
         synthetic_parts.append(class_df)
 
     if not synthetic_parts:
-        raise RuntimeError('생성된 합성 데이터가 없습니다.')
+        raise RuntimeError('No synthetic data was generated.')
 
     synthetic_df = pd.concat(synthetic_parts, ignore_index=True)
     
-    # 생성된 데이터가 target 열이 올바른 라벨 분포를 따르는지 검사
+    # Check whether the generated target column follows the expected label distribution
     _check_generated_data(synthetic_df, mappings, class_sizes)
     
     if save:
@@ -491,6 +491,6 @@ def sample(FLAGS, save=True, output_path=None, verbose=True):
             save_path = os.path.join(FLAGS.save_dir, f"{FLAGS.data}_CoDi_syn.csv")
         synthetic_df.to_csv(save_path, index=False)
         if verbose:
-            logging.info('합성 데이터를 저장했습니다: %s', save_path)
+            logging.info('Saved synthetic data: %s', save_path)
 
     return synthetic_df

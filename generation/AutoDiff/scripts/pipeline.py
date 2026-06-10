@@ -1,4 +1,4 @@
-"""AutoDiff 파이프라인 유틸리티"""
+"""AutoDiff pipeline utilities."""
 
 import os
 import json
@@ -22,7 +22,7 @@ from generation.selection import (
     should_save_candidate,
 )
 
-# 기본 설정 파일 경로
+# Default config file path
 _DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.toml')
 _MODEL_CONFIG_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..', '..', '..', 'config', 'generation', 'autodiff.toml')
@@ -30,7 +30,7 @@ _MODEL_CONFIG_PATH = os.path.abspath(
 
 
 def _load_config(args):
-    """설정 파일을 불러온다."""
+    """Load a configuration file."""
     config_path = getattr(args, 'config_path', None)
     if not config_path:
         config_path = _DEFAULT_CONFIG_PATH
@@ -60,7 +60,7 @@ def _load_config(args):
 
 
 def _ensure_device(args):
-    """파이프라인에서 사용할 디바이스 문자열을 반환한다."""
+    """Return the device string used by the pipeline."""
     device = getattr(args, 'device', torch.device('cpu'))
     if isinstance(device, torch.device):
         return device.type
@@ -68,7 +68,7 @@ def _ensure_device(args):
 
 
 def build_target_encoder(df, column, mapping):
-    """타깃 컬럼을 0/1로 인코딩하고 역매핑을 반환한다."""
+    """Encode the target column as 0/1 and return the inverse mapping."""
     original_to_encoded = {}
     values = df[column].dropna().tolist()
     for value in values:
@@ -79,7 +79,7 @@ def build_target_encoder(df, column, mapping):
 
     encoded_values = sorted(set(original_to_encoded.values()))
     if len(encoded_values) != 2:
-        raise ValueError('타깃 클래스가 2개가 아닙니다.')
+        raise ValueError('The target does not have exactly two classes.')
 
     if set(encoded_values) != {0, 1}:
         remap = {encoded_values[0]: 0, encoded_values[1]: 1}
@@ -93,21 +93,21 @@ def build_target_encoder(df, column, mapping):
 
 
 def _make_dataloader(args):
-    """AutoDiff 학습에 필요한 데이터를 구성한다."""
+    """Prepare data required for AutoDiff training."""
     config = _load_config(args)
     threshold = config.get('threshold', 0.01)
 
     data_dir = getattr(args, 'data_dir', './data')
     data_name = getattr(args, 'data_name')
     if data_name is None:
-        raise ValueError('data_name 인자가 필요합니다.')
+        raise ValueError('data_name argument is required.')
 
     info_path = os.path.join(data_dir, 'datasets_info.json')
     with open(info_path, 'r', encoding='utf-8') as file:
         datasets_info = json.load(file)
 
     if data_name not in datasets_info:
-        raise ValueError(f'{data_name} 데이터셋 정보를 찾을 수 없습니다.')
+        raise ValueError(f'{data_name} dataset information could not be found.')
 
     dataset_info = datasets_info[data_name]
     target_col = dataset_info['target']
@@ -129,7 +129,7 @@ def _make_dataloader(args):
     parser = pce.DataFrameParser().fit(train_features, threshold)
 
     if train_features[target_col].nunique() != 2:
-        raise ValueError('학습 데이터의 타깃 분포가 binary가 아닙니다.')
+        raise ValueError('The training target distribution is not binary.')
 
     train_class_0 = train_features.loc[train_features[target_col] == 0].reset_index(drop=True)
     train_class_1 = train_features.loc[train_features[target_col] == 1].reset_index(drop=True)
@@ -144,7 +144,7 @@ def _make_dataloader(args):
 
     for label, payload in class_payloads.items():
         if len(payload['df']) == 0:
-            raise ValueError(f'타깃 {label} 클래스 데이터가 존재하지 않습니다.')
+            raise ValueError(f'target {label} class data does not exist.')
 
     dataloader = {
         'config': config,
@@ -166,7 +166,7 @@ def _make_dataloader(args):
 
 
 def _build_score_params(latent_dim):
-    """확산 모델 구성을 반환한다."""
+    """Return the diffusion model configuration."""
     rtdl_params = {
         'd_in': latent_dim,
         'd_layers': [256, 256],
@@ -181,7 +181,7 @@ def _build_score_params(latent_dim):
 
 
 def _instantiate_score_model(score_meta):
-    """저장된 설정으로 확산 모델을 복원한다."""
+    """Restore the diffusion model from saved settings."""
     latent_dim = score_meta['latent_dim']
     params = dict(score_meta['rtdl_params'])
     dim_t = score_meta.get('dim_t', 128)
@@ -190,7 +190,7 @@ def _instantiate_score_model(score_meta):
 
 
 def _train_model(args, dataloaders, verbose=True):
-    """AutoDiff 학습 루프를 수행한다."""
+    """Run the AutoDiff training loop."""
     config = dataloaders.config
     auto_cfg = config.get('autoencoder', {})
     diff_cfg = config.get('diffusion', {})
@@ -315,11 +315,11 @@ def _train_model(args, dataloaders, verbose=True):
 
 
 def _sample(args, model_or_ckpt, save=True, output_path=None, verbose=True):
-    """학습된 모델로 데이터를 생성한다."""
-    set_seed(args.seed) # seed를 지정
+    """Generate data with the trained model."""
+    set_seed(args.seed) # set the seed
     dataloaders = getattr(args, 'dataloaders', None)
     if dataloaders is None:
-        raise ValueError('샘플링에는 dataloaders 정보가 필요합니다.')
+        raise ValueError('Sampling requires dataloaders.')
 
     if isinstance(model_or_ckpt, dict) and 'class_models' in model_or_ckpt:
         ckpt = model_or_ckpt

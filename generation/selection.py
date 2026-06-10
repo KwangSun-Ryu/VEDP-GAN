@@ -1,4 +1,4 @@
-"""공통 best checkpoint selection 유틸."""
+"""Shared best-checkpoint selection utilities."""
 
 import os
 import shutil
@@ -33,10 +33,10 @@ TVC_COLUMN = "tvc_full"
 def load_model_selection_config(model_name):
     config_file = MODEL_CONFIG_FILES.get(model_name)
     if config_file is None:
-        raise KeyError(f"지원하지 않는 generation config 모델입니다: {model_name}")
+        raise KeyError(f"unsupported generation config model: {model_name}")
     config_path = Path(__file__).resolve().parents[1] / "config" / "generation" / config_file
     if not config_path.exists():
-        raise FileNotFoundError(f"checkpoint_selection config가 없습니다: {config_path}")
+        raise FileNotFoundError(f"checkpoint_selection config not found: {config_path}")
     with open(config_path, "rb") as file:
         return tomllib.load(file)
 
@@ -60,7 +60,7 @@ def flatten_config(payload):
 def selection_enabled(config):
     flat = flatten_config(config)
     if flat.get("enable_best_on_test_selection") is not True:
-        raise ValueError("일반 generation에서는 checkpoint_selection.enable_best_on_test_selection=true가 필수입니다.")
+        raise ValueError("Standard generation requires checkpoint_selection.enable_best_on_test_selection=true.")
     return True
 
 
@@ -340,7 +340,7 @@ def run_best_selection(args, config, candidates, sample_candidate, promote_best,
     )
     best_path = promote_best(selected)
     if not os.path.exists(best_path):
-        raise FileNotFoundError(f"best_on_test checkpoint 생성에 실패했습니다: {best_path}")
+        raise FileNotFoundError(f"failed to create best_on_test checkpoint: {best_path}")
     if cleanup_candidates is not None:
         cleanup_candidates(best_path)
     save_json(

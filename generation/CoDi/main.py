@@ -13,13 +13,13 @@ pd.set_option('display.max_rows', None)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('data', 'Gallstone', help='dataset 이름')
-flags.DEFINE_string('data_dir', './data/CoDi_data', help='dataset 경로')
-flags.DEFINE_string('exp_dir', './exp/CoDi', help='모델 가중치, 각종 실험 파일 저장 경로')
-flags.DEFINE_string('save_dir', './output/CoDi', help='합성 데이터 저장 경로')
-flags.DEFINE_enum('mode', None, ['train', 'sample', 'eval'], '모드 선택 [train or sample or eval]')
-flags.DEFINE_bool('is_balanced', True, help='학습/샘플링 시 target class를 balanced로 처리할지 여부')
-flags.DEFINE_integer('seed', 42, help='재현성을 위한 시드값')
+flags.DEFINE_string('data', 'Gallstone', help='dataset name')
+flags.DEFINE_string('data_dir', './data/CoDi_data', help='dataset path')
+flags.DEFINE_string('exp_dir', './exp/CoDi', help='Path for model weights and experiment files')
+flags.DEFINE_string('save_dir', './output/CoDi', help='Synthetic data output path')
+flags.DEFINE_enum('mode', None, ['train', 'sample', 'eval'], 'mode [train or sample or eval]')
+flags.DEFINE_bool('is_balanced', True, help='Whether to treat the target class as balanced during training/sampling')
+flags.DEFINE_integer('seed', 42, help='Seed for reproducibility')
 
 # Network Architecture
 flags.DEFINE_multi_integer('encoder_dim', None, help='encoder_dim')

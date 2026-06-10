@@ -304,7 +304,7 @@ def run_best_selection(args, loaders, run_dirs):
     best_path = build_checkpoint_path(run_dirs, args.data_name, args.variant_slug, "best_on_test")
     shutil.copy2(selected["ckpt_path"], best_path)
     if not os.path.exists(best_path):
-        raise FileNotFoundError(f"VEDP_GAN best_on_test checkpoint 생성에 실패했습니다: {best_path}")
+        raise FileNotFoundError(f"VEDP_GAN failed to create best_on_test checkpoint: {best_path}")
     _cleanup_checkpoints(args, run_dirs)
 
     save_json(

@@ -1,6 +1,6 @@
 # Ablation Study CLI
 
-`ablation`은 공개용 `VEDP-GAN`을 기준으로 generator comparison과 blending ablation을 실행합니다.
+`ablation` runs generator comparison and blending ablation for the public `VEDP-GAN` package.
 
 ## Generator comparison
 
@@ -16,7 +16,7 @@ python main.py ablation \
   --test
 ```
 
-## VEDP-GAN baseline만 실행
+## Run Only The VEDP-GAN Baseline
 
 ```bash
 python main.py ablation \
@@ -45,4 +45,4 @@ python main.py ablation \
   --test
 ```
 
-`blend_alpha_05`는 `generator_comparison/CVA/vedp_gan` 결과와 설정이 같으면 재학습하지 않고 해당 결과를 재사용합니다.
+`blend_alpha_05` reuses `generator_comparison/CVA/vedp_gan` results when the settings match, instead of retraining.

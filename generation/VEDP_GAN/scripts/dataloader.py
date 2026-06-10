@@ -1,4 +1,4 @@
-"""generation VEDP_GAN 데이터 로더."""
+"""generation VEDP_GAN dataloader."""
 
 import json
 import math
@@ -150,7 +150,7 @@ def build_training_batch_sampler(loaders, config, train_loader=None):
     if strategy == "natural":
         return None, info
     if strategy != "auto_minority_quota":
-        raise ValueError(f"지원하지 않는 batch_sampling_strategy={strategy}")
+        raise ValueError(f"unsupported batch_sampling_strategy={strategy}")
 
     batch_size = train_loader.batch_size or getattr(config, "batch_size", 256)
     sampler = MinorityQuotaIndexSampler(
@@ -371,11 +371,11 @@ def make_dataloader(args):
     csv_path = os.path.join(args.data_dir, "original_data", f"{args.data_name}.csv")
     original_df = pd.read_csv(csv_path)
     if "split" not in original_df.columns:
-        raise ValueError("CSV에 split 열이 필요하다.")
+        raise ValueError("CSV must contain a split column.")
 
     train_df = original_df.loc[original_df["split"] == "train"].copy()
     if train_df.empty:
-        raise ValueError("train split이 비어 있다.")
+        raise ValueError("train split is empty.")
 
     train_df = train_df.drop(columns=["split"])
     con_cols, binary_cols, cat_cols = _split_features_v2(args, train_df, target_col)

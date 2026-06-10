@@ -1,4 +1,4 @@
-"""TTGAN 모델을 감싸는 래퍼 모듈."""
+"""Wrapper module around the TTGAN model."""
 
 import pandas as pd
 import numpy as np
@@ -11,7 +11,7 @@ from sdv.single_table.utils import detect_discrete_columns
 from tqdm.auto import tqdm
 
 class TTGANSynthesizer(BaseSingleTableSynthesizer):
-    """``TTGAN`` 모델을 감싸는 클래스.
+    """Class that wraps the ``TTGAN`` model.
 
     Args:
         metadata (sdv.metadata.SingleTableMetadata):
@@ -162,7 +162,7 @@ class TTGANSynthesizer(BaseSingleTableSynthesizer):
         }
 
     def _fit(self, processed_data):
-        """모델을 데이터에 학습시킨다.
+        """Train the model on data.
 
         Args:
             processed_data (pandas.DataFrame):
@@ -174,7 +174,7 @@ class TTGANSynthesizer(BaseSingleTableSynthesizer):
         self._model.fit(processed_data, discrete_columns=discrete_columns)
 
     def _sample(self, num_rows, conditions=None):
-        """모델에서 지정된 수만큼 샘플을 생성한다.
+        """Generate the requested number of samples from the model.
 
         Args:
             num_rows (int):
@@ -194,14 +194,14 @@ class TTGANSynthesizer(BaseSingleTableSynthesizer):
         raise NotImplementedError("TTGANSynthesizer doesn't support conditional sampling.")
 
 class TTGANWrapper:
-    """``TTGANSynthesizer``를 여러 개 사용하여 클래스 별로 학습하는 Wrapper.
+    """Wrapper that trains one ``TTGANSynthesizer`` per class.
 
     Args:
         metadata (sdv.metadata.SingleTableMetadata):
             Single table metadata representing the data that this synthesizer will be used for.
         target (str): Name of the target column.
-        ckpt_path (str): checkpoint를 저장할 경로
-        class_labels (list): target이 가지고 있는 class labels ex) [0, 1]
+        ckpt_path (str): path where checkpoints are saved
+        class_labels (list): class labels held by the target, e.g. [0, 1]
     """
 
     def __init__(self, metadata, target, class_labels, verbose, epochs, ckpt_path,
@@ -214,7 +214,7 @@ class TTGANWrapper:
         self.models = []
 
         if self.classwise:
-            assert len(class_labels) == 2, "⚠️ class 개수는 반드시 2개이어야 합니다."
+            assert len(class_labels) == 2, "⚠️ Class count must be exactly 2."
             self.models = [
                 TTGANSynthesizer(metadata   = metadata,
                                  target     = str(label),
@@ -243,15 +243,15 @@ class TTGANWrapper:
                 pbar.update(1)
 
     def sample(self, num_rows):
-        """ num_rows를 받아 데이터를 생성함 """
+        """Generate data for the given num_rows."""
         if not self.classwise:
             return self.single_model._sample(num_rows).copy()
         first_label, second_label = self.class_labels
-        # 데이터 개수 지정
+        # Set the data count
         num_first = num_rows // 2
         num_second = num_rows - num_first
         
-        # 데이터 생성 순서
+        # Data generation order
         iter_data = [
             (first_label, num_first, self.models[0]),
             (second_label, num_second, self.models[1]) ]
@@ -261,4 +261,4 @@ class TTGANWrapper:
             df = model._sample(count).copy()
             samples.append(df)
         
-        return pd.concat(samples).sample(frac=1, ignore_index=True) # 행 셔플
+        return pd.concat(samples).sample(frac=1, ignore_index=True) # shuffle rows

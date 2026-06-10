@@ -1,5 +1,5 @@
 """
-TTGAN 전용 공용 유틸 함수 정의 스크립트
+Shared utility functions for TTGAN.
 """
 
 import json
@@ -7,7 +7,7 @@ import numpy as np
 
 
 def sanitize_column_name(name):
-    """열 이름에 포함된 특수 문자를 제거해 LightGBM 등이 허용하는 이름으로 변환함"""
+    """Remove special characters from column names so LightGBM and similar models accept them."""
     sanitized = str(name).strip()
     for pattern, repl in (
         (':', '_'),
@@ -25,7 +25,7 @@ def sanitize_column_name(name):
 
 
 def build_column_mapping(column_names):
-    """원본 열 이름을 정제된 열 이름으로 매핑하는 dict를 생성함"""
+    """Create a dict mapping original column names to sanitized column names."""
     mapping = {}
     used = set()
     for original in column_names:
@@ -43,13 +43,13 @@ def build_column_mapping(column_names):
 
 
 def apply_column_mapping(df, mapping):
-    """DataFrame 열 이름을 지정된 매핑으로 변환한 사본을 반환함"""
+    """Return a copy whose DataFrame column names are converted by the given mapping."""
     rename_map = {orig: clean for orig, clean in mapping.items() if orig in df.columns}
     return df.rename(columns=rename_map)
 
 
 def dump_column_map(path, mapping, encoded_cols, discretized_cols, target):
-    """열 이름 매핑 정보를 json 파일로 저장함"""
+    """Save column-name mapping information to a JSON file."""
     clean_to_original = {clean: orig for orig, clean in mapping.items()}
     payload = {
         "original_to_clean": mapping,
@@ -66,13 +66,13 @@ def dump_column_map(path, mapping, encoded_cols, discretized_cols, target):
 
 
 def load_column_map(path):
-    """열 이름 매핑 정보를 json 파일에서 불러옴"""
+    """Load column-name mapping information from a JSON file."""
     with open(path, 'r', encoding='utf-8') as fp:
         return json.load(fp)
 
 
 def apply_sampling_noise(df, columns, dtype_map, noise_ratio, min_scale=1e-6):
-    """연속형 컬럼에 노이즈를 주입해 동일 bin에서도 값이 조금씩 달라지도록 함"""
+    """Inject noise into continuous columns so values vary slightly within the same bin."""
     if noise_ratio <= 0:
         return
 

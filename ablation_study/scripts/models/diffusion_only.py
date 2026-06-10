@@ -1,4 +1,4 @@
-"""Diffusion-only baseline 모델."""
+"""Diffusion-only baseline model."""
 
 import math
 import os
@@ -62,7 +62,7 @@ class DiffusionOnlyConfig:
     def load_config(self, config_path, verbose=True):
         if not os.path.exists(config_path):
             if verbose:
-                tqdm.write(f"[WARN] config.toml not found: {config_path} | default config 사용")
+                tqdm.write(f"[WARN] config.toml not found: {config_path} | using default config")
             return
         with open(config_path, "rb") as file:
             config = normalize_bounded_head_config(flatten_model_config_dict(tomllib.load(file)))

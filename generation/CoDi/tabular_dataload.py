@@ -53,58 +53,58 @@ def _get_columns(metadata):
 
 def load_data(data_name, data_dir='./data/CoDi_data', is_balanced=False, benchmark=False):
     '''
-    지정된 데이터셋을 불러와서 학습/테스트용 데이터와 메타 정보를 반환하는 함수
+    Load the specified dataset and return train/test data with metadata.
 
     Parameters
     ----------
     data_name : str
-        데이터셋 이름 (ex. "Gallstone")
+        Dataset name (ex. "Gallstone")
     data_dir : str
-        데이터 파일이 저장된 디렉토리 경로
+        Directory path where data files are stored
     is_balanced : bool
-        True일 경우, class 별(train_class_0, train_class_1)로 나눈 데이터셋 불러옴
-        False일 경우, 전체 train 데이터를 한 번에 불러옴
+        If True, load datasets split by class (train_class_0, train_class_1)
+        If False, load the full train data at once
     benchmark : bool
-        (현재 코드에서는 사용되지 않음, 확장용 파라미터)
+        (currently unused; reserved for extension)
 
     Returns
     -------
     train_dict : dict
-        학습 데이터 딕셔너리
+        Training data dictionary
         - is_balanced=True  →  {'class_0': ..., 'class_1': ...}
         - is_balanced=False →  {'all': ...}
     test : np.ndarray
-        테스트 데이터셋
+        Test dataset
     info : tuple
         (categorical_columns, meta)
-        - categorical_columns : 연속형/범주형 컬럼 구분 정보
-        - meta : 데이터셋 메타 정보(JSON에서 불러옴)
+        - categorical_columns: continuous/categorical column type information
+        - meta: dataset metadata loaded from JSON
     '''
 
     data_dir = os.path.join(data_dir, data_name)
     if is_balanced:
-        # 클래스별 데이터셋 로드
+        # Load class-specific datasets
         data_class_0 = _load_file(data_name + '_class_0.npz', np.load, data_dir)
         data_class_1 = _load_file(data_name + '_class_1.npz', np.load, data_dir)
 
-        # 학습 데이터를 클래스별 dict로 구성
+        # Build training data as a class-specific dict
         train_dict = {
             'class_0': data_class_0['train'],
             'class_1': data_class_1['train']
         }
 
-        # 테스트 데이터는 class_0 쪽에 저장된 것을 사용
+        # Use the test data stored under class_0
         test = data_class_0['test']
 
     else:
-        # 단일 데이터셋 로드 (train + test)
+        # Load a single dataset (train + test)
         data = _load_file(data_name + '.npz', np.load, data_dir)
 
-        # 학습 데이터를 하나의 key('all')로 묶음
+        # Store training data under a single key ('all')
         train_dict = {'all': data['train']}
         test = data['test']
 
-    # 메타 정보(JSON)와 컬럼 타입 정보 불러오기
+    # Load metadata (JSON) and column type information
     meta = _load_file(data_name + '.json', _load_json, data_dir)
     categorical_columns = _get_columns(meta)
 
@@ -112,17 +112,17 @@ def load_data(data_name, data_dir='./data/CoDi_data', is_balanced=False, benchma
 
 def get_dataset(FLAGS, evaluation=False):
     """
-    탭ুল러 데이터셋을 로드하고(이미 npz -> ndarray), 
-    연속형/범주형을 분리한 뒤 GeneralTransformer로 변환까지 수행하여 반환.
+    Load a tabular dataset (already npz -> ndarray),
+    split continuous/categorical columns, transform them with GeneralTransformer, and return the result.
 
     - is_balanced=True  → train_dict: {'class_0': ..., 'class_1': ...}
     - is_balanced=False → train_dict: {'all': ...}
 
-    반환 시에도 변환 결과를 dict로 맞춰, 호출 측 로직을 단순화한다.
+    Return transformed results as dictionaries to simplify caller logic.
     """
 
     # -----------------------------
-    # 1) 배치 크기 검증 (GPU 수가 0일 수도 있으므로 안전하게)
+    # 1) Validate batch size, safely handling zero-GPU cases
     # -----------------------------
     batch_size = FLAGS.training_batch_size if not evaluation else FLAGS.eval_batch_size
 
@@ -134,7 +134,7 @@ def get_dataset(FLAGS, evaluation=False):
             )
 
     # -----------------------------
-    # 2) 데이터 로드
+    # 2) Load data
     # -----------------------------
     train_dict, test, (cat_cols, meta) = load_data(
         FLAGS.data, FLAGS.data_dir, FLAGS.is_balanced
@@ -142,49 +142,49 @@ def get_dataset(FLAGS, evaluation=False):
     # train_dict: balanced → {'class_0': arr, 'class_1': arr}
     #              not     → {'all': arr}
     # test: ndarray
-    # cat_cols: 범주형(=이산형) 컬럼 인덱스 리스트
-    # meta: json 메타 정보
+    # cat_cols: categorical (= discrete) column index list
+    # meta: JSON metadata
 
     # -----------------------------
-    # 3) 컬럼 인덱스 계산 (con_idx, dis_idx)
-    #    - 참조 배열 하나를 잡아 전체 컬럼 개수 파악
+    # 3) Compute column indices (con_idx, dis_idx)
+    #    - Use one reference array to determine the total column count
     # -----------------------------
     if FLAGS.is_balanced:
-        ref_arr = train_dict['class_0']  # 두 클래스의 열 개수는 동일하다고 가정
+        ref_arr = train_dict['class_0']  # assume both classes have the same number of columns
     else:
         ref_arr = train_dict['all']
 
-    cols_idx = list(np.arange(ref_arr.shape[1]))  # 전체 컬럼 인덱스
-    dis_idx = cat_cols                            # 범주형(=이산형) 컬럼 인덱스
-    con_idx = [i for i in cols_idx if i not in dis_idx]  # 연속형 컬럼 인덱스
+    cols_idx = list(np.arange(ref_arr.shape[1]))  # all column indices
+    dis_idx = cat_cols                            # categorical (= discrete) column indices
+    con_idx = [i for i in cols_idx if i not in dis_idx]  # continuous column indices
 
-    # 편의 함수: 연속형/범주형 슬라이스
+    # Convenience function: continuous/categorical slices
     def split_con_dis(arr):
         return arr[:, con_idx], arr[:, dis_idx]
 
     # -----------------------------
-    # 4) Transformer 준비/학습
-    #    - GeneralTransformer API 가정:
+    # 4) Prepare/train transformers
+    #    - GeneralTransformer API assumption:
     #        .fit(X, categorical_index_list)
     #        .transform(X)
-    #    - 연속형(con)은 cat 인덱스 없음 → []
-    #    - 범주형(dis)은 열 전부 카테고리 → cat_idx_ = range(dis.shape[1])
+    #    - continuous (con) has no categorical indices -> []
+    #    - categorical (dis) treats all columns as categorical -> cat_idx_ = range(dis.shape[1])
     # -----------------------------
     transformer_con = GeneralTransformer()
     transformer_dis = GeneralTransformer()
 
     if FLAGS.is_balanced:
-        # (1) fit 은 'class_0' + 'class_1' 을 세로로 이어붙여 공통 인코딩 보장
+        # (1) Fit on vertically concatenated 'class_0' + 'class_1' to ensure shared encoding
         concat_train = np.concatenate([train_dict['class_0'], train_dict['class_1']], axis=0)
         concat_con, concat_dis = split_con_dis(concat_train)
 
-        # 범주형 변환기에서 사용할 카테고리 인덱스(new index)
+        # Category indices used by the categorical transformer (new index)
         cat_idx_ = list(np.arange(concat_dis.shape[1]))[:len(dis_idx)]
 
         transformer_con.fit(concat_con, [])
         transformer_dis.fit(concat_dis, cat_idx_)
 
-        # (2) 각 클래스별로 transform 결과를 dict로 반환
+        # (2) Return transform results as a dict per class
         train_con_data = {}
         train_dis_data = {}
 
@@ -198,7 +198,7 @@ def get_dataset(FLAGS, evaluation=False):
         train_dis_data['class_1'] = transformer_dis.transform(c1_dis)
 
     else:
-        # 단일 train(all)에 대해 fit/transform
+        # Fit/transform on the single train(all) split
         train = train_dict['all']
         train_con, train_dis = split_con_dis(train)
 
@@ -207,19 +207,19 @@ def get_dataset(FLAGS, evaluation=False):
         transformer_con.fit(train_con, [])
         transformer_dis.fit(train_dis, cat_idx_)
 
-        # 반환 형태를 맞추기 위해 dict로 래핑
+        # Wrap in a dict to keep the return format consistent
         train_con_data = {'all': transformer_con.transform(train_con)}
         train_dis_data = {'all': transformer_dis.transform(train_dis)}
 
     # -----------------------------
-    # 5) 반환 형식(항상 dict로 통일)
+    # 5) Return format (always normalized to dicts)
     # -----------------------------
-    # - train_dict: 원본(train) 배열들(dict)
-    # - train_con_data: 연속형 변환 결과(dict)
-    # - train_dis_data: 범주형 변환 결과(dict)
-    # - test: 원본 test 배열(ndarray)
-    # - (transformer_con, transformer_dis, meta): 변환기와 메타 정보
-    # - con_idx, dis_idx: 인덱스 리스트(호출 측에서 복원/후처리 시 사용)
+    # - train_dict: original train arrays (dict)
+    # - train_con_data: continuous transform results (dict)
+    # - train_dis_data: categorical transform results (dict)
+    # - test: original test array (ndarray)
+    # - (transformer_con, transformer_dis, meta): transformers and metadata
+    # - con_idx, dis_idx: index lists used by callers for restoration/postprocessing
     return (
         train_dict,
         train_con_data,

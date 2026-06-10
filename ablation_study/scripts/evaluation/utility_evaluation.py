@@ -1,4 +1,4 @@
-"""ablation_study utility 평가."""
+"""Utility evaluation for ablation_study."""
 
 import os
 
@@ -112,11 +112,11 @@ def _make_stratified_folds(y, k_folds=5, seed=42):
     labels = np.asarray(y, dtype=np.int64)
     unique, counts = np.unique(labels, return_counts=True)
     if len(unique) < 2:
-        raise ValueError("pMSE 계산에는 최소 2개 클래스가 필요하다.")
+        raise ValueError("pMSE calculation requires at least two classes.")
 
     k = int(min(k_folds, counts.min()))
     if k < 2:
-        raise ValueError("pMSE 계산을 위한 fold 수가 부족하다.")
+        raise ValueError("not enough folds for pMSE calculation.")
 
     rng = np.random.default_rng(seed)
     fold_bins = [[] for _ in range(k)]

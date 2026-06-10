@@ -1,13 +1,13 @@
 """
-- TTGAN의 train_generator.py 수행
-- 논문의 Generation Stage에 해당
-- TTGAN-CAT (discretized 연속형 변수 + encoded 범주형 변수)만 사용
+- Run TTGAN train_generator.py
+- Corresponds to the Generation Stage in the paper
+- Use only TTGAN-CAT (discretized continuous variables + encoded categorical variables)
 """
 
-#### 라이브러리 호출 ####
+#### Import libraries ####
 
 import warnings
-warnings.simplefilter(action='ignore', category=Warning)  # 경고 출력 억제
+warnings.simplefilter(action='ignore', category=Warning)  # suppress warning output
 
 import json
 import pickle
@@ -22,42 +22,42 @@ from utils import DATA_NAME, set_seed
 from generation.selection import flatten_config, load_model_selection_config
 
 def create_args():
-    """ 명령행 인자 받는 함수 """
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, choices=DATA_NAME, help='데이터셋 이름')
+    parser.add_argument('--data-name', type=str, choices=DATA_NAME, help='Dataset name')
     parser.add_argument('--gen-model-name', choices=["CTGAN-O", "CopulaGAN-O", "TTGAN-O", "CTGAN-CAT", "CopulaGAN-CAT", "TTGAN-CAT"],
-                        default='TTGAN-CAT', help='생성 모델 선택')
-    parser.add_argument('--data-dir', type=str, default='./data/ver_3', help='데이터셋 경로')
-    parser.add_argument('--exp-dir', type=str, default='./exp/run_04', help='모델 가중치, 각종 실험 파일 저장 경로')
-    parser.add_argument('--seed', type=int, default=42, help='재현성을 위한 SEED 값')
+                        default='TTGAN-CAT', help='select the generative model')
+    parser.add_argument('--data-dir', type=str, default='./data/ver_3', help='dataset path')
+    parser.add_argument('--exp-dir', type=str, default='./exp/run_04', help='Path for model weights and experiment files')
+    parser.add_argument('--seed', type=int, default=42, help='Seed for reproducibility')
     
     args = parser.parse_args()
     
     return args
     
 def load_data(args):
-    """ 학습 데이터를 불러오는 함수 """
+    """Load training data."""
     data_dir = os.path.join(args.data_dir, 'TTGAN_data', args.data_name)
     
-    # 학습 데이터 종류 파악
+    # Identify the training data type
     train_data = args.gen_model_name.split("-")[1]
     
-    # 학습 데이터 불러오기
+    # Load training data
     if train_data == 'CAT':
         data = pd.read_csv(os.path.join(data_dir, 'discretized', 'train.csv'))
     elif train_data == 'O':
         data = pd.read_csv(os.path.join(data_dir, 'encoded', 'train.csv'))
     
-    # 메타데이터 불러오기
+    # Load metadata
     columns = json.load(open(os.path.join(data_dir, 'columns.json'), 'r', encoding="utf-8"))
     metadata = SingleTableMetadata()
     metadata.detect_from_dataframe(data=data)
     
-    # 메타데이터 업데이트
+    # Update metadata
     for col_info in columns:
         metadata.update_column(column_name=col_info['name'], sdtype=col_info['type'])
     
-    # 메타데이터 검증
+    # Validate metadata
     mismatches = [
         (col_info['name'], col_info['type'], col_info['dtype']) for col_info in columns
             if metadata.columns[col_info['name']]['sdtype'] != col_info['type']]
@@ -69,21 +69,21 @@ def load_data(args):
     else:
         rprint("metadata check passed: all columns match")
     
-    # target 변수 지정
+    # Set target variable
     target_cols = [col_info['name'] for col_info in columns if col_info['target']]
     if not target_cols:
-        raise ValueError("❌ target column이 columns.json에 존재하지 않습니다.")
+        raise ValueError("❌ Target column does not exist in columns.json.")
     target = target_cols[0]
     
-    # class label 지정
+    # Set class labels
     class_labels = sorted(data[target].unique().tolist())
     
     return data, target, metadata, class_labels
 
 def train_generator(args):
-    """ Generator 학습 """
+    """Train the generator."""
     set_seed(args.seed)
-    # 1) 데이터 불러오기
+    # 1) Load data
     data, target, metadata, class_labels = load_data(args)
     config = TTGANConfig()
     config.load_from_exp(args)
@@ -91,11 +91,11 @@ def train_generator(args):
     config.epochs = selection_flat.get("epochs", config.epochs)
     
     if args.gen_model_name == "TTGAN-CAT":
-        # 2) 경로 지정 & 생성
+        # 2) Set and create paths
         exp_dir = os.path.join(args.exp_dir, 'TTGAN', args.data_name, 'generators')
         os.makedirs(exp_dir, exist_ok=True)
         
-        # 3) 모델 파라미터 지정
+        # 3) Set model parameters
         synth_kwargs = config.to_synth_kwargs()
         synth_kwargs.update({
             "selection_candidate_start_epoch": min(config.epochs, selection_flat.get("selection_candidate_start_epoch", 1001)),
@@ -121,19 +121,19 @@ def train_generator(args):
                 checkpoint = exp_dir,
                 **synth_kwargs )
         
-        # 4) 모델 학습
+        # 4) Train model
         model.fit(data)
         
-        # 5) 모델 저장
+        # 5) Save model
         pickle.dump(model, open(os.path.join(exp_dir, f"{args.gen_model_name}.pkl"), 'wb'))
     else:
-        raise NotImplementedError(f"{args.gen_model_name}은 아직 구현하지 않았습니다.")
+        raise NotImplementedError(f"{args.gen_model_name} is not implemented yet.")
 
 def main():
-    # 명령행 인자 생성
+    # Create command-line arguments
     args = create_args()
     
-    # 모델 학습
+    # Train model
     train_generator(args)
 
 if __name__ == '__main__':

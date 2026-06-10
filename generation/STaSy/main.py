@@ -31,17 +31,17 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 FLAGS = flags.FLAGS
 config_flags.DEFINE_config_file(
     "config", None, "Training configuration.", lock_config=True)
-flags.DEFINE_string("exp_dir", "./exp/STaSy", "모델 가중치, 각종 실험 파일 저장 경로")
-flags.DEFINE_string('save_dir', './output/STaSy', '합성 데이터 저장 경로')
-flags.DEFINE_string("data_dir", './data', '데이터셋 경로')
-flags.DEFINE_integer("sample_seed", 42, help='합성 데이터 생성 시 seed값 지정')
+flags.DEFINE_string("exp_dir", "./exp/STaSy", "Path for model weights and experiment files")
+flags.DEFINE_string('save_dir', './output/STaSy', 'Synthetic data output path')
+flags.DEFINE_string("data_dir", './data', 'dataset path')
+flags.DEFINE_integer("sample_seed", 42, help='seed for synthetic data generation')
 flags.DEFINE_enum("mode", None, ["train", "fine_tune", 'eval', 'sample'], "Run training")
 flags.DEFINE_integer("log_every", 1, 
-    "학습할 때, log 출력 간격")
+    "log output interval during training")
 flags.DEFINE_bool("init_folder", True, 
-    "학습할 때, 기존에 저장된 파일들 초기화할지 여부")
+    "whether to reset existing saved files before training")
 flags.DEFINE_bool("is_balanced", False,
-    "학습/샘플링 시 타깃 클래스를 균형 있게 처리할지 여부")
+    "whether to treat target classes as balanced during training/sampling")
 flags.DEFINE_string("eval_folder", "eval",
                     "The folder name for storing evaluation results")
 flags.mark_flags_as_required(["config", "mode"])

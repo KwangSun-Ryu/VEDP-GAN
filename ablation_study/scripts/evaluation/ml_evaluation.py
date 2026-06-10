@@ -1,4 +1,4 @@
-"""ablation_study ML 평가."""
+"""ML evaluation for ablation_study."""
 
 import glob
 import os
@@ -52,9 +52,9 @@ def _get_lightgbm_gpu_device():
 def _ensure_gpu_only(args):
     device_ml = (getattr(args, "device_ml", "gpu") or "").lower()
     if device_ml != "gpu":
-        raise ValueError("ablation_study ML 평가는 gpu 모드만 지원한다.")
+        raise ValueError("ablation_study ML evaluation supports only gpu mode.")
     if not torch.cuda.is_available():
-        raise RuntimeError("GPU ML 평가를 요청했지만 CUDA를 사용할 수 없다.")
+        raise RuntimeError("GPU ML evaluation was requested, but CUDA is not available.")
 
 
 def _to_numpy(value):
@@ -76,7 +76,7 @@ def _to_numpy(value):
 
 def _to_cudf_frame(X):
     if cudf is None:
-        raise RuntimeError("cudf가 없는 환경에서 cuML RandomForest 경로를 호출했다.")
+        raise RuntimeError("cuML RandomForest path was called in an environment without cudf.")
     if isinstance(X, cudf.DataFrame):
         return X
     if isinstance(X, pd.DataFrame):
@@ -86,7 +86,7 @@ def _to_cudf_frame(X):
 
 def _to_cudf_series(y):
     if cudf is None:
-        raise RuntimeError("cudf가 없는 환경에서 cuML RandomForest 경로를 호출했다.")
+        raise RuntimeError("cuML RandomForest path was called in an environment without cudf.")
     if isinstance(y, cudf.Series):
         return y
     if isinstance(y, pd.Series):
@@ -115,7 +115,7 @@ def _build_xgb_category_maps(X_train, X_test, cat_cols):
 def _to_xgb_input(X, category_maps=None):
     if category_maps:
         if not isinstance(X, pd.DataFrame):
-            raise TypeError("XGBoost categorical 입력은 pandas DataFrame 이어야 한다.")
+            raise TypeError("XGBoost categorical input must be a pandas DataFrame.")
         X_frame = X.copy()
         for col, categories in category_maps.items():
             if col not in X_frame.columns:
@@ -266,7 +266,7 @@ def get_feature_importances(model, eval_model):
         importances = model.get_feature_importance(type="PredictionValuesChange")
     else:
         if not hasattr(model, "feature_importances_"):
-            raise ValueError(f"{type(model).__name__} 에 feature_importances_ 속성이 없다.")
+            raise ValueError(f"{type(model).__name__} does not have feature_importances_.")
         importances = model.feature_importances_
 
     importances = np.abs(_to_numpy(importances).astype(float))
@@ -319,7 +319,7 @@ def get_eval_models_config(eval_model_config_dir):
     for eval_model in EVAL_MODEL_NAME:
         matched_path = next((path for path in config_paths if eval_model.lower() in path.lower()), None)
         if matched_path is None:
-            raise FileNotFoundError(f"평가 모델 설정이 없다: {eval_model} @ {eval_model_config_dir}")
+            raise FileNotFoundError(f"evaluation model config not found: {eval_model} @ {eval_model_config_dir}")
         with open(matched_path, "r", encoding="utf-8") as file:
             config_dict[eval_model] = yaml.full_load(file)
     return config_dict

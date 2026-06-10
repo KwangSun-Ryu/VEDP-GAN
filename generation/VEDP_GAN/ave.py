@@ -9,10 +9,10 @@ Original file is located at
 
 # =========================================
 # Tabular VEDP_GAN (Latent Diffusion + GAN)
-# - Decoder는 "비조건부"(y 미사용)
-# - Discriminator/Generator만 y-conditional (AC-GAN 스타일)
-# - z0 재구성(MSE/BCE), KL 정규화 포함
-# - 합성 시 class 고정(TARGET_CLASS) 또는 원본 비율(p_label) 유지
+# - Decoder is unconditional (does not use y)
+# - Only Discriminator/Generator are y-conditional (AC-GAN style)
+# - Includes z0 reconstruction (MSE/BCE) and KL regularization
+# - During synthesis, fix class (TARGET_CLASS) or preserve original ratio (p_label)
 # =========================================
 
 # ===== Config =====
@@ -36,7 +36,7 @@ LR          = 1e-3
 
 
 N_SYNTH      = 1000
-TARGET_CLASS = 1   # None이면 원본 비율대로 합성.
+TARGET_CLASS = 1   # None uses the original ratio for synthesis.
 
 # ===== Imports =====
 import os, random, numpy as np, pandas as pd
@@ -63,7 +63,7 @@ assert LABEL_COL in df.columns, f"'{LABEL_COL}' No columns."
 y = df[LABEL_COL].astype(int)
 X = df.drop(columns=[LABEL_COL])
 
-# ===== 컬럼 타입 자동 분류 =====
+# ===== Automatic column type classification =====
 num_cols = [c for c in X.columns if np.issubdtype(X[c].dtype, np.number)]
 obj_cols = [c for c in X.columns if c not in num_cols]
 binary_cols, cat_cols, cont_cols = [], [], []
@@ -78,22 +78,22 @@ for c in num_cols:
             cont_cols.append(c)
 cat_cols += obj_cols
 
-print(f"[INFO] 연속형: {cont_cols}")
-print(f"[INFO] 이진형(0/1): {binary_cols}")
-print(f"[INFO] 범주형(원-핫): {cat_cols}")
-print(f"[INFO] 레이블: {LABEL_COL}")
+print(f"[INFO] continuous: {cont_cols}")
+print(f"[INFO] binary (0/1): {binary_cols}")
+print(f"[INFO] categorical (one-hot): {cat_cols}")
+print(f"[INFO] label: {LABEL_COL}")
 
-# ===== 원-핫 인코딩(범주형) =====
+# ===== One-hot encoding (categorical) =====
 X_cat_oh = pd.get_dummies(X[cat_cols], prefix=cat_cols, dummy_na=False) if len(cat_cols)>0 else pd.DataFrame(index=X.index)
 
-# ===== 연속형 표준화 =====
+# ===== Continuous standardization =====
 scaler = StandardScaler()
 X_cont_scaled = pd.DataFrame(
     scaler.fit_transform(X[cont_cols]) if len(cont_cols)>0 else np.zeros((len(X),0)),
     columns=cont_cols, index=X.index
 )
 
-# ===== 이진형은 그대로 =====
+# ===== Keep binary values as-is =====
 X_bin = X[binary_cols].astype(float) if len(binary_cols)>0 else pd.DataFrame(index=X.index)
 
 # ===== cont + (one-hot + binary) =====
@@ -102,7 +102,7 @@ X_cont_np = X_cont_scaled.values.astype(np.float32)
 X_bin_np  = X_bin_oh.values.astype(np.float32)
 y_np      = y.values.astype(np.int64)
 
-# 복원 meta info
+# restoration metadata
 oh_info = {
     "cat_cols": cat_cols,
     "oh_columns": list(X_cat_oh.columns),
@@ -122,7 +122,7 @@ class TabDataset(Dataset):
         self.Xc = torch.tensor(X_cont_np, dtype=torch.float32)
         self.Xb = torch.tensor(X_bin_np,  dtype=torch.float32)
         self.y  = torch.tensor(y_np,      dtype=torch.long)
-        self.Xa = torch.cat([self.Xc, self.Xb], dim=1)  # encoder 입력
+        self.Xa = torch.cat([self.Xc, self.Xb], dim=1)  # encoder input
     def __len__(self): return len(self.Xa)
     def __getitem__(self, i): return self.Xc[i], self.Xb[i], self.Xa[i], self.y[i]
 
@@ -196,7 +196,7 @@ class Generator(nn.Module):
         return self.net(h)
 
 class DecoderMixed(nn.Module):
-    """비조건부 Decoder: z -> (x_cont, x_bin_logit)"""
+    """Unconditional decoder: z -> (x_cont, x_bin_logit)."""
     def __init__(self, latent_dim, cont_dim, bin_dim):
         super().__init__()
         self.shared = nn.Sequential(nn.Linear(latent_dim, 64), nn.ReLU())
@@ -233,14 +233,14 @@ def kl_loss(mu, logvar):
 C, B = X_cont_np.shape[1], X_bin_np.shape[1]
 model = VEDP_GANMixed(C, B, latent_dim=LATENT_DIM, noise_dim=NOISE_DIM, timesteps=TIMESTEPS).to(device)
 
-# ===== ave 버전 학습 루틴 (Decoder는 비조건부) =====
+# ===== AVE-version training routine (decoder is unconditional) =====
 def _train_model_ave(
     model, dl, device, *,
     epochs=30, lr=1e-3, alpha=0.5, w_rec=1.0, w_kl=0.01, w_cls=1.0 ):
     """
-    AVE 버전: z_blend = α*z0 + (1-α)*z_t(real) 를 Discriminator의 real로 사용.
-    fake는 Generator(noise, t, y)로 만든 z_t(fake).
-    Reconstruction은 z0→x (안정성), KL 정규화, AC-GAN 보조 분류(head) 포함.
+    AVE version: use z_blend = alpha*z0 + (1-alpha)*z_t(real) as real input for the discriminator.
+    Fake data is z_t(fake) created by Generator(noise, t, y).
+    Reconstruction includes z0 -> x for stability, KL regularization, and the AC-GAN auxiliary classification head.
     """
     mse = nn.MSELoss()
     bce_logits = nn.BCEWithLogitsLoss()
@@ -314,7 +314,7 @@ def synthesize_conditional(model, n_samples, target_class=None, p_label=None, bi
 
     if target_class is None:
         if p_label is None:
-            raise ValueError("p_label이 None입니다. 원본 비율을 쓰려면 p_label을 주세요.")
+            raise ValueError("p_label is None. Provide p_label to use the original ratio.")
         y_fake = torch.bernoulli(torch.full((n_samples,), float(p_label), device=device)).long()
     else:
         y_fake = torch.full((n_samples,), int(target_class), device=device, dtype=torch.long)

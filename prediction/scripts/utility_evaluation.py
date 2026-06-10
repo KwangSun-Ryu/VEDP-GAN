@@ -16,7 +16,7 @@ from .progress_reporter import NullProgressReporter
 
 
 # --------------------------------------------------------------------------------
-# 1. Utility Metrics 계산 유틸
+# 1. Utility metric calculation utilities
 # --------------------------------------------------------------------------------
 def _configure_mp_safety():
     ## Avoid oversubscription in multiprocessing workers.
@@ -123,9 +123,9 @@ def calculate_cio_score(real_x, real_y, syn_x, syn_y):
 
 def calculate_utility_score(args, gen_model, data_name, multiples_max=None, test_num=None):
     """
-    데이터셋을 불러 Propensity Score, CIO를 계산한다.
+    Load the dataset and compute Propensity Score and CIO.
     """
-    ## 실제/합성 데이터 불러오기
+    ## Load real/synthetic data
     dataset = TabularDataset(
         gen_model, data_name,
         data_dir=args.data_dir,
@@ -143,7 +143,7 @@ def calculate_utility_score(args, gen_model, data_name, multiples_max=None, test
         cat_cols=pmse_cat_cols, num_cols=con_cols)
 
     results = pmse_metric.evaluate()
-    propensity_score = 1 - (4 * results['avg pMSE'])  # 0 ~ 1 사이의 값으로 반환
+    propensity_score = 1 - (4 * results['avg pMSE'])  # return a value between 0 and 1
 
     cio_score = calculate_cio_score(X_test, y_test, X_train, y_train)
 
@@ -195,10 +195,10 @@ def compute_utility_for_dataset(args):
 
 
 # --------------------------------------------------------------------------------
-# 2. Utility Metrics 평가 실행
+# 2. Run utility metric evaluation
 # --------------------------------------------------------------------------------
 def evaluate_utility_metrics(args, reporter=None):
-    """Propensity Score, COI를 계산해 CSV 파일로 저장한다."""
+    """Compute Propensity Score and COI and save them as CSV files."""
     reporter = reporter or NullProgressReporter(verbose=getattr(args, "verbose_eval", False))
 
     _configure_mp_safety()
@@ -289,7 +289,7 @@ def evaluate_utility_metrics(args, reporter=None):
         results_coi.to_csv(coi_path, index=False)
 
         reporter.info(
-            f"[Utils] 저장 완료: propensity={ps_path}, coi={coi_path}",
+            f"[Utils] saved: propensity={ps_path}, coi={coi_path}",
             verbose_only=True,
         )
 

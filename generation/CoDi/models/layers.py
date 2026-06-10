@@ -44,7 +44,7 @@ def variance_scaling(scale, mode, distribution,
                      device='cpu'):
   def _compute_fans(shape, in_axis=1, out_axis=0):
     if shape[in_axis] == 0 or shape[out_axis] == 0:
-      # in/out 중 하나가 0이면 fan 값을 1로 고정해 분모 0을 피한다.
+      # If either in/out is zero, pin fan to 1 to avoid a zero denominator.
       return 1.0, 1.0
     receptive_field_size = np.prod(shape) / shape[in_axis] / shape[out_axis]
     fan_in = shape[in_axis] * receptive_field_size

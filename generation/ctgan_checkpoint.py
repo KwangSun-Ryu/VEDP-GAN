@@ -1,4 +1,4 @@
-"""Checkpoint 가능한 CTGAN wrapper."""
+"""Checkpointable CTGAN wrapper."""
 
 import os
 import warnings

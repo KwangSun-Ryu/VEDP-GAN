@@ -1,4 +1,4 @@
-"""ablation_study DCR 평가."""
+"""DCR evaluation for ablation_study."""
 
 import json
 import os

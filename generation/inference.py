@@ -1,13 +1,13 @@
 """
-학습 과정을 거쳐 나온 가중치, 설정 파일을 불러와 합성 데이터 생성
-목적: 기존의 학습된 모델의 가중치와 메타정보를 불러와 각 데이터셋에 대해 합성 데이터를 1 ~ 7배 생성
-* 기존의 run_03 때의 모델 가중치 이용
+Generate synthetic data by loading trained weights and configuration files
+Purpose: load pretrained model weights and metadata to generate 1x to 7x synthetic data for each dataset
+* Use model weights from the existing run_03 experiment
 """
 
 """
-순서:
-1. Parser 구축
-2. 데이터셋 호출
+Steps:
+1. Build the parser
+2. Load datasets
 """
 
 from .generator import Generator
@@ -23,7 +23,7 @@ from utils import GEN_MODEL_NAME, set_seed
 def load_dataset_names(data_dir):
     info_path = os.path.join(data_dir, 'datasets_info.json')
     if not os.path.exists(info_path):
-        raise FileNotFoundError(f"datasets_info.json이 존재하지 않습니다: {info_path}")
+        raise FileNotFoundError(f"datasets_info.json does not exist: {info_path}")
     with open(info_path, 'r', encoding='utf-8') as file:
         return list(json.load(file).keys())
 
@@ -36,13 +36,13 @@ def validate_dataset_names(data_names, data_dir):
     missing = [name for name in data_names if name not in dataset_names]
     if missing:
         raise ValueError(
-            f"--data-name에 현재 --data-dir 기준으로 존재하지 않는 데이터셋이 포함되어 있습니다: {missing}")
+            f"--data-name contains datasets that do not exist under the current --data-dir: {missing}")
 
     return data_names
 
 
 def get_temp_path(path):
-    """경로 충돌 방지를 위해 임시 경로 사용"""
+    """Use a temporary path to avoid path conflicts."""
 
     abs_path = os.path.abspath(path)
     drive, root, tail = os.path.splitroot(abs_path)
@@ -72,24 +72,24 @@ def _atomic_write_csv(df, path):
 
 
 def create_args():
-    """명령행 인자를 파싱"""
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, nargs='+', help='데이터셋 이름')
-    parser.add_argument('--model-name', type=str, choices=GEN_MODEL_NAME, nargs='+', help='생성 모델 이름')
-    parser.add_argument('--data-dir', type=str, default='./data/ver_3', help='데이터셋 경로')
-    parser.add_argument('--exp-dir', type=str, default='./exp/run_03', help='모델 가중치, 메타정보 저장 경로')
-    parser.add_argument('--save-dir', type=str, default='./output/run_04', help='합성 데이터 저장 경로')
-    parser.add_argument('--log-dir', type=str, default='./result/run_04', help='실험 결과 저장 경로')
-    parser.add_argument('--temp-dir', action=argparse.BooleanOptionalAction, help='임시 저장 경로 사용 여부')
-    parser.add_argument('--multiplier', type=int, default=1, help='생성 데이터의 배수')
-    parser.add_argument('--seed', type=int, default=42, help='재현성 확보를 위한 SEED 값 지정')
+    parser.add_argument('--data-name', type=str, nargs='+', help='Dataset name')
+    parser.add_argument('--model-name', type=str, choices=GEN_MODEL_NAME, nargs='+', help='Generative model name')
+    parser.add_argument('--data-dir', type=str, default='./data/ver_3', help='dataset path')
+    parser.add_argument('--exp-dir', type=str, default='./exp/run_03', help='Model weights and metadata output path')
+    parser.add_argument('--save-dir', type=str, default='./output/run_04', help='Synthetic data output path')
+    parser.add_argument('--log-dir', type=str, default='./result/run_04', help='Experiment result output path')
+    parser.add_argument('--temp-dir', action=argparse.BooleanOptionalAction, help='Whether to use a temporary output path')
+    parser.add_argument('--multiplier', type=int, default=1, help='Synthetic data multiplier')
+    parser.add_argument('--seed', type=int, default=42, help='Seed for reproducibility')
     parser.add_argument('--sampling-strategy', type=str, choices=['prior', 'balanced'], default='prior',
-                        help='합성 데이터 class 분포 전략')
+                        help='Synthetic data class distribution strategy')
     parser.add_argument('--config', type=str, default='./config/generation/vedp_gan.toml',
-                        help='VEDP-GAN 샘플링 TOML config 경로')
+                        help='VEDP-GAN sampling TOML config path')
     parser.add_argument('--eval-model-config-dir', type=str, default='./config/prediction',
-                        help='checkpoint selection 평가 모델 config 경로')
-    parser.add_argument('--verbose-model', action='store_true', help='모델 내부 진행 로그 출력 여부')
+                        help='Evaluation model config path for checkpoint selection')
+    parser.add_argument('--verbose-model', action='store_true', help='Whether to print verbose model progress logs')
 
     args = parser.parse_args()
 
@@ -98,7 +98,7 @@ def create_args():
         args.model_name = GEN_MODEL_NAME
 
     if args.multiplier < 1:
-        raise ValueError('--multiplier는 1 이상이어야 합니다.')
+        raise ValueError('--multiplier must be at least 1.')
 
     if args.temp_dir:
         args.save_dir = get_temp_path(args.save_dir)
@@ -153,7 +153,7 @@ def main():
                         verbose=args.verbose_model)
 
                     if sampled_df is None:
-                        raise ValueError('생성 결과가 비어 있습니다.')
+                        raise ValueError('generated result is empty.')
 
                     sampled_df = sampled_df.copy()
                     sampled_df['multiples'] = multiple + 1

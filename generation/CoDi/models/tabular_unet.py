@@ -30,13 +30,13 @@ class tabularUnet(nn.Module):
     tdim = self.embed_dim*4
     self.act = get_act(FLAGS)
 
-    # 연속형/출력 차원이 0이면 실제 연산을 수행할 필요가 없다.
-    # 이때는 모든 Linear를 만들지 않고, forward 단계에서 0 텐서를 반환한다.
+    # If the continuous/output dimension is zero, no real computation is required.
+    # In this case, skip creating Linear layers and return zero tensors in forward.
     self.empty_mode = (FLAGS.input_size == 0 or FLAGS.output_size == 0)
     self.output_size = FLAGS.output_size
     if self.empty_mode:
-      # 파라미터 목록이 비어 있으면 옵티마이저가 생성되지 않으므로
-      # 학습 루프와 호환되도록 더미 파라미터를 등록한다.
+      # If the parameter list is empty, the optimizer cannot be created, so
+      # register a dummy parameter for compatibility with the training loop.
       self.dummy_param = nn.Parameter(torch.zeros(1))
       self.all_modules = nn.ModuleList()
       return

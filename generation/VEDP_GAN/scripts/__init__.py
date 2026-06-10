@@ -1,1 +1,1 @@
-"""VEDP_GAN 스크립트 패키지."""
+"""VEDP_GAN scripts package."""

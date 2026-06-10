@@ -1,4 +1,4 @@
-"""ablation_study 평가용 데이터 로더."""
+"""Dataloader for ablation_study evaluation."""
 
 import json
 import os
@@ -56,7 +56,7 @@ class TabularDataset:
             train_data = self.normalize_columns(self.synthetic_frame.copy())
         else:
             if not os.path.exists(self.synthetic_path):
-                raise FileNotFoundError(f"합성 데이터가 없다: {self.synthetic_path}")
+                raise FileNotFoundError(f"synthetic data not found: {self.synthetic_path}")
             train_data = self.normalize_columns(pd.read_csv(self.synthetic_path))
         return train_data, self.original_test_data.copy()
 
@@ -68,7 +68,7 @@ class TabularDataset:
             return self.original_test_data.copy()
         if scope == "full":
             return self.original_full_data.copy()
-        raise ValueError(f"지원하지 않는 reference_scope: {reference_scope}")
+        raise ValueError(f"unsupported reference_scope: {reference_scope}")
 
     def _preprocess_pair(self, train_data, reference_data, multiples_max=None, test_num=None):
         train_data = train_data.copy()

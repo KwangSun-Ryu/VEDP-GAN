@@ -1,6 +1,6 @@
-"""TTGAN 모듈.
+"""TTGAN module.
 
-Transformer 기반 테이블 데이터 생성 모델의 핵심 구현을 포함한다.
+Contains the core implementation of the Transformer-based tabular data generation model.
 """
 
 import copy
@@ -38,7 +38,7 @@ from generation.selection import should_save_candidate
 
 
 def _make_grad_scaler(use_amp, device_type: str):
-    """AMP 설정에 맞춰 GradScaler를 생성함"""
+    """Create a GradScaler according to the AMP settings."""
     if use_amp:
         try:
             return amp.GradScaler(device_type, enabled=True)
@@ -55,7 +55,7 @@ def _make_grad_scaler(use_amp, device_type: str):
 
 
 class _AutocastAdaptor:
-    """PyTorch 버전에 따라 자동으로 autocast 컨텍스트를 제공함"""
+    """Provide an autocast context according to the PyTorch version."""
 
     def __init__(self, device_type: str, enabled: bool):
         self.device_type = device_type
@@ -77,7 +77,7 @@ class _AutocastAdaptor:
 
 
 class ResidualDiscriminatorBlock(Module):
-    """Discriminator용 residual 블록"""
+    """Residual block for the discriminator."""
 
     def __init__(self, in_dim, out_dim, dropout):
         super(ResidualDiscriminatorBlock, self).__init__()
@@ -104,7 +104,7 @@ class ResidualDiscriminatorBlock(Module):
 
 
 class Discriminator(Module):
-    """TTGAN에서 사용되는 판별자 네트워크."""
+    """Discriminator network used by TTGAN."""
 
     def __init__(self, input_dim, discriminator_dim, pac=10, use_residual=False,
                  residual_layers=0, residual_dropout=0.3):
@@ -171,7 +171,7 @@ class Residual(Module):
 
 
 class Generator(Module):
-    """TTGAN에서 실제 데이터를 생성하는 생성자 네트워크."""
+    """Generator network that creates real-valued data in TTGAN."""
 
     def __init__(self, embedding_dim, num_layers, data_dim):
         super(Generator, self).__init__()
@@ -202,9 +202,9 @@ class Generator(Module):
 
 
 class TTGAN(BaseSynthesizer):
-    """ conditional Tabular GAN 생성기.
+    """Conditional tabular GAN generator.
 
-    TTGAN 프로젝트의 핵심 클래스이며 여러 구성 요소를 통합하여 동작한다.
+    Core class of the TTGAN project that integrates multiple components.
 
     Args:
         embedding_dim (int):
@@ -317,7 +317,7 @@ class TTGAN(BaseSynthesizer):
 
     @staticmethod
     def _gumbel_softmax(logits, tau=1, hard=False, eps=1e-10, dim=-1):
-        """오래된 torch 버전에서 gumbel_softmax 불안정 문제를 처리하기 위한 함수.
+        """Handle gumbel_softmax instability in older torch versions.
 
         For more details about the issue:
         https://drive.google.com/file/d/1AA5wPfZ1kquaRtVruCd6BiYZGcDeNxyP/view?usp=sharing

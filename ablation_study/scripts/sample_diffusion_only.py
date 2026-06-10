@@ -1,4 +1,4 @@
-"""Diffusion-only baseline 샘플링."""
+"""Diffusion-only baseline sampling."""
 
 import os
 

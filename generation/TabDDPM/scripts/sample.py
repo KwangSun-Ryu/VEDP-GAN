@@ -60,13 +60,13 @@ def _infer_column_names(dataset_name, dataset_info_path, X_num, X_cat):
     return num_cols, cat_cols, target_name
 
 def inverse_column_mapping(real_data_dir, df):
-    ''' 기존의 categorical columns를 원래 값으로 되돌림 '''
+    ''' Restore existing categorical columns to their original values '''
     with open(os.path.join(real_data_dir, 'mappings.json'), 'r', encoding="utf-8") as file:
         mappings_info = json.load(file)
     mappings = mappings_info.get('categorical', {})
 
     for col, mapping in mappings.items():
-        # 문자열 키를 int로 바꿔줘야 할 수도 있음
+        # String keys may need to be converted to integers
         new_mapping = {int(k): v for k, v in mapping.items()}
         if col in df.columns:
             df[col] = df[col].replace(new_mapping)
@@ -268,7 +268,7 @@ def sample(
         df_target = pd.DataFrame(y_array, columns=target_columns)
         df = pd.concat([df, df_target], axis=1)
 
-    assert len(df.columns.tolist()) == len(original_cols), "생성된 데이터의 열 개수가 일치하지 않음!"
+    assert len(df.columns.tolist()) == len(original_cols), "Generated data column count does not match!"
     df = df[original_cols]
 
     df = inverse_column_mapping(real_data_dir, df)

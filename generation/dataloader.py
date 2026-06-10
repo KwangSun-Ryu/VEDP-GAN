@@ -1,5 +1,5 @@
 '''
-합성 데이터 생성에 필요한 dataloader 만들기
+Create dataloaders required for synthetic data generation
 '''
 
 import os, sys, subprocess
@@ -11,10 +11,10 @@ from sdv.metadata import Metadata
 
 class TabularDataLoader():
     def __init__(self, data_name, model_name, data_dir='./data', seed=42, prepare_data=True, verbose=True):
-        self.data_name  = data_name  # 사용할 데이터 이름
-        self.model_name = model_name # 사용할 모델 이름
-        self.data_dir   = data_dir   # 데이터셋이 저장되어 있는 경로
-        self.seed       = seed       # 시드값
+        self.data_name  = data_name  # data name to use
+        self.model_name = model_name # model name to use
+        self.data_dir   = data_dir   # path where datasets are stored
+        self.seed       = seed       # seed value
         self.prepare_data = prepare_data
         self.verbose = bool(verbose)
         
@@ -31,7 +31,7 @@ class TabularDataLoader():
 
     def make_dataloader(self):
         '''
-        각 모델에 맞게, dataloader 생성
+        Create dataloaders for each model
         '''
         if self.model_name == 'CTGAN':
             metadata_path = self.load_cols_info_path()
@@ -52,7 +52,7 @@ class TabularDataLoader():
             return SimpleNamespace(**data_loader)
         
         if self.model_name == 'TabDDPM':
-            #### numpy dataset 생성 및 저장 ####
+            #### Create and save NumPy datasets ####
             if not self.prepare_data:
                 return None
             module_path = 'generation.TabDDPM.scripts.convert_my_data'
@@ -109,7 +109,7 @@ class TabularDataLoader():
             return autodiff_pipeline._make_dataloader(auto_args)
 
         if self.model_name == 'TTGAN':
-            data_loader = {'num_data': len(pd.read_csv(self.load_data_path())) } # 데이터 개수 추가
+            data_loader = {'num_data': len(pd.read_csv(self.load_data_path())) } # add the data count
             if self.prepare_data:
                 module_path  = 'generation.TTGAN.scripts.dataloader'
                 command = [
@@ -138,15 +138,15 @@ class TabularDataLoader():
 
     def load_cols_info_path(self):
         '''
-        열 정보를 담고 있는 json 파일 경로 불러오기
+        Load the JSON file path containing column information
         '''
         cols_info_path = os.path.join(self.data_dir, 'cols_info', f'{self.data_name}_metadata.json')
-        assert os.path.exists(cols_info_path), f"{cols_info_path}가 존재하지 않습니다."
+        assert os.path.exists(cols_info_path), f"{cols_info_path} does not exist."
         return cols_info_path
 
     def load_data_path(self):
         '''
-        데이터 파일 경로 불러오기
+        Load the data file path
         '''
         data_path = os.path.join(self.data_dir, 'original_data', f'{self.data_name}.csv')
         return data_path

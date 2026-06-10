@@ -1,4 +1,4 @@
-"""VEDP_GAN 진행바 유틸."""
+"""VEDP_GAN progress-bar utilities."""
 
 import os
 import shutil

@@ -1,5 +1,5 @@
 """
-다양한 평가지표로 생성된 데이터를 평가하는 스크립트
+Evaluate generated data with multiple metrics.
 """
 
 # --------------------------------------------------------------------------------
@@ -19,14 +19,14 @@ from .scripts.progress_reporter import ProgressReporter
 
 
 # --------------------------------------------------------------------------------
-# 2. 인자(argument) 파싱
+# 2. Parse arguments
 # --------------------------------------------------------------------------------
 def get_temp_path(path):
-    """경로 충돌 방지를 위해 임시 경로 사용"""
-    ## 절대 경로로 변환
+    """Use a temporary path to avoid path conflicts."""
+    ## Convert to an absolute path
     abs_path = os.path.abspath(path)
 
-    ##  경로를 최상위 경로, 루트, 나머지 세 덩어리로 쪼개기
+    ## Split the path into top-level path, root, and remaining tail
     drive, root, tail = os.path.splitroot(abs_path)
     path_name = os.path.split(tail)[-1]
 
@@ -53,7 +53,7 @@ def _normalize_multiples_values(values):
 def load_dataset_names(data_dir):
     info_path = os.path.join(data_dir, 'datasets_info.json')
     if not os.path.exists(info_path):
-        raise FileNotFoundError(f"datasets_info.json이 존재하지 않습니다: {info_path}")
+        raise FileNotFoundError(f"datasets_info.json does not exist: {info_path}")
     with open(info_path, 'r', encoding='utf-8') as file:
         return list(json.load(file).keys())
 
@@ -66,36 +66,36 @@ def validate_dataset_names(data_names, data_dir):
     missing = [name for name in data_names if name not in dataset_names]
     if missing:
         raise ValueError(
-            f"--data-name에 현재 --data-dir 기준으로 존재하지 않는 데이터셋이 포함되어 있습니다: {missing}")
+            f"--data-name contains datasets that do not exist under the current --data-dir: {missing}")
 
     return data_names
 
 
 def make_args():
     """
-    명령행 인자를 파싱해 평가에 필요한 설정 값을 반환한다.
+    Parse command-line arguments and return settings required for evaluation.
     """
-    parser = argparse.ArgumentParser(description='합성 데이터를 평가하기 위한 스크립트')
+    parser = argparse.ArgumentParser(description='Script for evaluating synthetic data')
     parser.add_argument('--metric-name', type=str, nargs='+',  # METRICS_NAME = ['ML', 'SDMetrics', 'Utils', 'DCR']
-                        help='어떤 metrics를 사용할지 지정 (아무것도 선택하지 않는 경우, 전체 실행)')
+                        help='Select which metrics to use. If omitted, run all metrics.')
     parser.add_argument('--model-name', type=str, nargs='+',
-                        help='데이터를 생성한 생성 모델 이름 (아무것도 선택하지 않는 경우, 전체 모델에 대해 실행)')
+                        help='Generative model name that created the data. If omitted, run all models.')
     parser.add_argument('--data-name', type=str, nargs='+',
-                        help='어떤 데이터셋을 사용할지 지정 (아무것도 선택하지 않는 경우, 전체 데이터셋 사용)')
+                        help='Select which datasets to use. If omitted, use all datasets.')
     parser.add_argument('--data-dir', type=str, default='./data',
-                        help='원천 데이터셋 경로')
+                        help='Source dataset path')
     parser.add_argument('--save-dir', type=str, default='./output',
-                        help='합성 데이터셋 경로')
+                        help='Synthetic dataset path')
     parser.add_argument('--log-dir', type=str, default='./result',
-                        help='평가 결과 저장 경로')
+                        help='Evaluation result output path')
     parser.add_argument('--seed', type=int, default=42,
-                        help='SEED 값 지정')
+                        help='Seed value')
     parser.add_argument('--eval-model-config-dir', type=str, default='./config/prediction',
-                        help='AUC를 측정하기 위한 모델의 기본 config 경로')
+                        help='Default model config path for AUC measurement')
     parser.add_argument('--eval-model-num-trials', type=int, default=100,
-                        help='AUC를 몇 번 측정할지 지정')
+                        help='Number of AUC measurement trials')
     parser.add_argument('--temp-dir', action=argparse.BooleanOptionalAction,
-                        help='임시 저장 경로 사용 여부')
+                        help='Whether to use a temporary output path')
     parser.add_argument('--multiples', action=argparse.BooleanOptionalAction,
                         help='Use cumulative multiples for synthetic data')
     parser.add_argument('--multiples-values', type=int, nargs='+',
@@ -103,13 +103,13 @@ def make_args():
     parser.add_argument('--original-test', action=argparse.BooleanOptionalAction,
                         help='Use original train/test split for ML evaluation only')
     parser.add_argument('--multiprocessing', action=argparse.BooleanOptionalAction,
-                        help='멀티프로세싱 사용 여부')
+                        help='Whether to use multiprocessing')
     parser.add_argument('--num-workers', type=int, default=None,
-                        help='멀티프로세싱 워커 수 (미지정 시 자동)')
+                        help='Number of multiprocessing workers (auto if omitted)')
     parser.add_argument('--test', action=argparse.BooleanOptionalAction,
-                        help='빠른 테스트 모드 사용 여부')
+                        help='Whether to use fast test mode')
     parser.add_argument('--test-num', type=int, default=10,
-                        help='테스트 모드에서 사용할 레코드 수')
+                        help='Number of records to use in test mode')
     parser.add_argument('--resume-dcr', action=argparse.BooleanOptionalAction,
                         help='Resume DCR evaluation from saved progress')
     parser.add_argument('--device-dcr', type=str, default='cpu',
@@ -117,7 +117,7 @@ def make_args():
     parser.add_argument('--device-ml', type=str, default='gpu',
                         help='ML evaluation device: cpu or gpu')
     parser.add_argument('--verbose-eval', action='store_true',
-                        help='평가 단계 상세 로그 출력 여부')
+                        help='Whether to print detailed evaluation logs')
 
     args = parser.parse_args()
     args.original_test = bool(args.original_test)
@@ -150,7 +150,7 @@ def make_args():
     if args.original_test and uses_ml_metric and (args.multiples or multiples_values_raw is not None):
         raise ValueError("--original-test cannot be used with --multiples or --multiples-values when ML is selected.")
 
-    ## 임시 경로 지정 ##
+    ## Set temporary path ##
     if args.temp_dir:
         args.log_dir = get_temp_path(args.log_dir)
 
@@ -158,11 +158,11 @@ def make_args():
 
 
 # --------------------------------------------------------------------------------
-# 3. 스크립트 시작 포인트
+# 3. Script entry point
 # --------------------------------------------------------------------------------
 def main():
     """
-    사용자 요청에 맞춰 선택된 평가 루틴을 실행한다.
+    Run the evaluation routines selected by the user request.
     """
     args = make_args()
 

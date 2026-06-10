@@ -1,4 +1,4 @@
-"""prediction 평가 실행 전역 진행/로그 유틸."""
+"""Global progress/logging utilities for prediction evaluation."""
 
 import threading
 
@@ -6,7 +6,7 @@ from tqdm.auto import tqdm
 
 
 class NullProgressReporter:
-    """진행바를 사용하지 않는 fallback 리포터."""
+    """Fallback reporter that does not use a progress bar."""
 
     def __init__(self, verbose=False):
         self.verbose = bool(verbose)
@@ -33,7 +33,7 @@ class NullProgressReporter:
 
 
 class ProgressReporter:
-    """전역 단일 tqdm와 스레드 안전 로그 출력을 담당."""
+    """Handle a global single tqdm instance and thread-safe log output."""
 
     def __init__(self, verbose=False, colour="#0075f2"):
         self.verbose = bool(verbose)

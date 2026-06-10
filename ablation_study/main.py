@@ -1,4 +1,4 @@
-"""ablation_study 메인 실행 스크립트."""
+"""Main runner for ablation_study."""
 
 import argparse
 import json
@@ -212,8 +212,8 @@ SAMPLE_DISPATCH = {
 def build_parser():
     parser = argparse.ArgumentParser(description="ablation_study standalone runner")
     parser.add_argument("--experiment", type=str, required=True, choices=EXPERIMENT_CHOICES)
-    parser.add_argument("--data-name", type=str, nargs="+", help="실험할 데이터셋")
-    parser.add_argument("--variant-slug", type=str, nargs="+", help="실행할 variant slug만 선택")
+    parser.add_argument("--data-name", type=str, nargs="+", help="Datasets to run")
+    parser.add_argument("--variant-slug", type=str, nargs="+", help="Run only the selected variant slugs")
     parser.add_argument("--data-dir", type=str, default="./data")
     parser.add_argument("--config-dir", type=str, default="./config/ablation")
     parser.add_argument("--exp-dir", type=str, default="./exp/ablation")
@@ -229,7 +229,7 @@ def build_parser():
         type=str,
         nargs="+",
         choices=EVAL_STAGE_ORDER,
-        help="실행할 평가 단계 선택. 미지정 시 ml sdmetrics utility dcr 전체 실행",
+        help="Evaluation stages to run. If omitted, run all: ml sdmetrics utility dcr",
     )
     parser.add_argument("--stability-num-seeds", type=int, default=1)
     parser.add_argument("--blending-auc-mode", type=str, choices=BLENDING_AUC_MODES, default="ml_seed")
@@ -295,7 +295,7 @@ def _resolve_checkpoint_selection_settings(config_flat):
     policy = str(config_flat.get("checkpoint_selection_policy", DEFAULT_CHECKPOINT_SELECTION_POLICY)).strip()
     if policy not in CHECKPOINT_SELECTION_POLICIES:
         valid = ", ".join(CHECKPOINT_SELECTION_POLICIES)
-        raise ValueError(f"checkpoint_selection_policy={policy} 은(는) 지원하지 않는다. choices={valid}")
+        raise ValueError(f"checkpoint_selection_policy={policy} is not supported. choices={valid}")
 
     default_use_stable_score = policy == "stable_fidelity_score"
     if policy == "best_auc_test":
@@ -356,8 +356,8 @@ def build_variant_args(args, spec, data_name, config_path, config_dict, seed=Non
         missing_stages = [stage for stage in SELECTION_REQUIRED_STAGES if stage not in args.eval_stages]
         if missing_stages:
             raise ValueError(
-                "checkpoint selection 사용 시 eval stage에 "
-                f"{', '.join(SELECTION_REQUIRED_STAGES)} 가 모두 포함되어야 한다."
+                "When using checkpoint selection, eval stages must include "
+                f"{', '.join(SELECTION_REQUIRED_STAGES)} must all be included."
             )
     checkpoint_selection_settings = _resolve_checkpoint_selection_settings(config_flat)
     return SimpleNamespace(
@@ -715,8 +715,8 @@ def resolve_experiment_specs(experiment, selected_variant_slugs=None, default_va
     if invalid:
         valid = ", ".join(allowed_slugs)
         raise ValueError(
-            f"--variant-slug 에 지정한 값이 experiment={experiment} 에 없다: {', '.join(invalid)} "
-            f"(가능한 값: {valid})"
+            f"--variant-slug contains values not present in experiment={experiment}: {', '.join(invalid)} "
+            f"(valid values: {valid})"
         )
 
     requested = list(dict.fromkeys(active_slugs))
@@ -726,8 +726,8 @@ def resolve_experiment_specs(experiment, selected_variant_slugs=None, default_va
     if missing:
         valid = ", ".join(spec["variant_slug"] for spec in specs)
         raise ValueError(
-            f"--variant-slug 에 지정한 값이 experiment={experiment} 에 없다: {', '.join(missing)} "
-            f"(가능한 값: {valid})"
+            f"--variant-slug contains values not present in experiment={experiment}: {', '.join(missing)} "
+            f"(valid values: {valid})"
         )
     return selected
 
@@ -1111,7 +1111,7 @@ def _resolve_snapshot_config_path(snapshot, run_dirs):
 
 
 def _raise_resume_incompatibility(message, run_dirs):
-    raise ValueError(f"--resume 기존 결과와 현재 실행 조건이 다르다: {message} ({run_dirs['base_dir']})")
+    raise ValueError(f"--resume found existing results with different run conditions: {message} ({run_dirs['base_dir']})")
 
 
 def _ensure_resume_snapshot_compatible(
@@ -1180,16 +1180,16 @@ def _ensure_resume_snapshot_compatible(
     expected_selection_enabled = bool(getattr(expected_variant_args, "enable_best_on_test_selection", False))
     if snapshot_selection_enabled != expected_selection_enabled:
         _raise_resume_incompatibility(
-            "enable_best_on_test_selection 값이 다르다",
+            "enable_best_on_test_selection differs",
             run_dirs,
         )
     config_snapshot_path = _resolve_snapshot_config_path(snapshot, run_dirs)
     if not config_snapshot_path:
-        _raise_resume_incompatibility("config snapshot 경로를 찾을 수 없다", run_dirs)
+        _raise_resume_incompatibility("config snapshot path could not be found", run_dirs)
     snapshot_config_dict = load_toml(config_snapshot_path)
     if not configs_match_for_resume(snapshot_config_dict, config_dict, ignore_batch_size=ignore_batch_size):
-        mode = "selection/eval 재사용" if ignore_batch_size else "train resume"
-        _raise_resume_incompatibility(f"{mode} 기준 config 값이 현재 TOML과 다르다", run_dirs)
+        mode = "selection/eval reuse" if ignore_batch_size else "train resume"
+        _raise_resume_incompatibility(f"{mode} reference config values differ from the current TOML", run_dirs)
 
 
 def _build_required_seed_result_paths(args, spec, data_name, seed_run_dirs, selection_enabled):
@@ -2192,10 +2192,10 @@ def run_best_on_test_selection(args, variant_args, spec, data_name, config_dict,
         total_epochs=total_epochs,
     )
     if not candidate_entries:
-        raise FileNotFoundError(f"checkpoint 후보가 없다: {seed_run_dirs['checkpoints_dir']}")
+        raise FileNotFoundError(f"no checkpoint candidates found: {seed_run_dirs['checkpoints_dir']}")
     if missing_epochs:
         raise FileNotFoundError(
-            f"필요한 checkpoint 후보가 없다: start={candidate_epoch_start} interval={candidate_epoch_interval} "
+            f"required checkpoint candidates are missing: start={candidate_epoch_start} interval={candidate_epoch_interval} "
             f"missing={missing_epochs[:5]}{'...' if len(missing_epochs) > 5 else ''}"
         )
     candidate_epochs = {int(entry["epoch"]) for entry in candidate_entries}
@@ -2837,16 +2837,16 @@ def main():
     ensure_dir(args.exp_dir)
 
     if args.stability_num_seeds < 1:
-        raise ValueError("--stability-num-seeds 는 1 이상의 정수여야 한다.")
+        raise ValueError("--stability-num-seeds must be an integer greater than or equal to 1.")
     if args.eval_model_num_trials < 1:
-        raise ValueError("--eval-model-num-trials 는 1 이상의 정수여야 한다.")
+        raise ValueError("--eval-model-num-trials must be an integer greater than or equal to 1.")
     if args.selection_save_every is not None and args.selection_save_every < DEFAULT_SELECTION_SAVE_EVERY:
-        raise ValueError("--selection-save-every 는 1 이상의 정수여야 한다.")
+        raise ValueError("--selection-save-every must be an integer greater than or equal to 1.")
     if args.stability_num_seeds > 1 and args.eval_model_num_trials != 1:
-        raise ValueError("generator seed 집계 모드에서는 --eval-model-num-trials 를 1로 고정해야 한다.")
+        raise ValueError("generator-seed aggregation mode requires --eval-model-num-trials to be fixed at 1.")
 
     if (args.device_ml or "").lower() != "gpu":
-        raise ValueError("ablation_study ML 평가는 gpu 모드만 지원한다. --device-ml gpu 로 실행해야 한다.")
+        raise ValueError("ablation_study ML evaluation supports only gpu mode. Run with --device-ml gpu.")
 
     if args.data_name is None:
         args.data_name = get_datasets_from_info(args.data_dir)
@@ -2856,12 +2856,12 @@ def main():
         missing_stages = [stage for stage in SELECTION_REQUIRED_STAGES if stage not in args.eval_stages]
         if missing_stages:
             raise ValueError(
-                "--enable-best-on-test-selection 사용 시 eval stage에 "
-                f"{', '.join(SELECTION_REQUIRED_STAGES)} 가 모두 포함되어야 한다."
+                "When using --enable-best-on-test-selection, eval stages must include "
+                f"{', '.join(SELECTION_REQUIRED_STAGES)} must all be included."
             )
 
     if args.blending_auc_mode != "ml_seed":
-        print("[WARN] --blending-auc-mode 는 더 이상 공식 집계에 사용되지 않는다. generator-seed 집계 결과만 저장한다.")
+        print("[WARN] --blending-auc-mode is no longer used for official aggregation. Only generator-seed aggregation results are saved.")
 
     specs = resolve_experiment_specs(
         args.experiment,

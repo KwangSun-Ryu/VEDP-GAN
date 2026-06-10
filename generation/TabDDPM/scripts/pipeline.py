@@ -20,7 +20,7 @@ from generation.selection import flatten_config, load_model_selection_config, se
 
 
 def load_or_create_config(config_path, is_train):
-    """템플릿 기반 설정을 로드하거나 새로 생성"""
+    """Load a template-based configuration or create a new one."""
     config_path = Path(config_path)
     if config_path.exists() and not is_train:
         return lib.load_config(str(config_path)), False
@@ -34,7 +34,7 @@ def load_or_create_config(config_path, is_train):
 
 def run_sample(data_name, data_dir, exp_dir, save_dir=None, sample_seed=None, change_val=False,
                save=True, output_path=None, model_path=None, verbose=True):
-    """TabDDPM 샘플링을 실행하고 생성 DataFrame을 반환한다."""
+    """Run TabDDPM sampling and return the generated DataFrame."""
     config_path = os.path.join(exp_dir, data_name, 'config.toml')
     raw_config, _ = load_or_create_config(config_path, is_train=False)
 
@@ -63,7 +63,7 @@ def run_sample(data_name, data_dir, exp_dir, save_dir=None, sample_seed=None, ch
             save_path = Path(output_path)
         else:
             if save_dir is None:
-                raise ValueError('save=True 인 경우 save_dir 또는 output_path가 필요합니다.')
+                raise ValueError('save_dir or output_path is required when save=True.')
             save_path = Path(save_dir) / f'{data_name}_TabDDPM_syn.csv'
 
     sample_kwargs = {
@@ -94,14 +94,14 @@ def run_sample(data_name, data_dir, exp_dir, save_dir=None, sample_seed=None, ch
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data-name', type=str, required=True, help='데이터셋 이름')
-    parser.add_argument('--data-dir', type=str, default='./data', help='데이터셋 경로')
-    parser.add_argument('--exp-dir', type=str, default='./exp/TabDDPM', help='모델 가중치, 각종 실험 파일 저장 경로 (e.g. exp)')
-    parser.add_argument('--save-dir', type=str, default='./output/TabDDPM', help='합성 데이터 저장 경로')
+    parser.add_argument('--data-name', type=str, required=True, help='Dataset name')
+    parser.add_argument('--data-dir', type=str, default='./data', help='dataset path')
+    parser.add_argument('--exp-dir', type=str, default='./exp/TabDDPM', help='Path for model weights and experiment files (e.g. exp)')
+    parser.add_argument('--save-dir', type=str, default='./output/TabDDPM', help='Synthetic data output path')
     parser.add_argument('--train', action='store_true', default=False)
     parser.add_argument('--sample', action='store_true', default=False)
     parser.add_argument('--change-val', action='store_true', default=False)
-    parser.add_argument('--sample-seed', type=int, default=None, help='합성 데이터 생성 시 seed값 지정')
+    parser.add_argument('--sample-seed', type=int, default=None, help='seed for synthetic data generation')
 
     args = parser.parse_args()
 

@@ -252,7 +252,7 @@ class MLP(nn.Module):
 ###########################################################################################################################################
 
 def _to_tensor_like(val, ref=None):
-    # 이미 텐서면 유지, 아니면 텐서로 변환하고 device/dtype을 ref에 맞춤
+    # Keep existing tensors; otherwise convert to a tensor and match ref device/dtype
     if torch.is_tensor(val):
         out = val
     else:
@@ -265,10 +265,10 @@ def _to_tensor_like(val, ref=None):
     return out
 
 def _ensure_batch_time(t, ref_x=None):
-    # t를 ref_x에 맞춰 device/dtype 통일 + 배치 차원 확장
+    # Match t to ref_x device/dtype and expand the batch dimension
     t = _to_tensor_like(t, ref=ref_x)
     if ref_x is not None and torch.is_tensor(ref_x):
-        # x가 [B, P] 또는 [P] 인 케이스 모두 지원
+        # Support both [B, P] and [P] cases for x
         batch = ref_x.shape[0] if ref_x.dim() >= 2 else t.shape[0]
         if t.ndim == 0:
             t = t.expand(batch)
@@ -276,7 +276,7 @@ def _ensure_batch_time(t, ref_x=None):
 
 # f(x,t)
 def drift_coeff(x, t, beta_1, beta_0):
-    # t와 beta들을 x에 맞춘 device/dtype으로 정규화 (재래핑으로 인한 UserWarning 방지)
+    # Normalize t and betas to the device/dtype of x to avoid UserWarning from rewrapping
     t = _ensure_batch_time(t, ref_x=x)
     b0 = _to_tensor_like(beta_0, ref=x)
     b1 = _to_tensor_like(beta_1, ref=x)
@@ -286,8 +286,8 @@ def drift_coeff(x, t, beta_1, beta_0):
 
 # g(t)
 def diffusion_coeff(t, beta_1, beta_0):
-    # t와 beta들을 동일 device/dtype으로 정규화
-    # (x가 없으므로 t 기준으로 통일)
+    # Normalize t and betas to the same device/dtype
+    # Use t as the reference because x is unavailable
     t = _to_tensor_like(t)
     b0 = _to_tensor_like(beta_0, ref=t)
     b1 = _to_tensor_like(beta_1, ref=t)
@@ -296,7 +296,7 @@ def diffusion_coeff(t, beta_1, beta_0):
     return diffusion
 
 def marginal_prob_mean(x, t, beta_1, beta_0):
-    # t와 beta들을 x 기준으로 정규화
+    # Normalize t and betas using x as the reference
     t = _ensure_batch_time(t, ref_x=x)
     b0 = _to_tensor_like(beta_0, ref=x)
     b1 = _to_tensor_like(beta_1, ref=x)
@@ -305,7 +305,7 @@ def marginal_prob_mean(x, t, beta_1, beta_0):
     return mean
 
 def marginal_prob_std(t, beta_1, beta_0):
-    # t와 beta들을 동일 device/dtype으로 정규화
+    # Normalize t and betas to the same device/dtype
     t = _to_tensor_like(t)
     b0 = _to_tensor_like(beta_0, ref=t)
     b1 = _to_tensor_like(beta_1, ref=t)

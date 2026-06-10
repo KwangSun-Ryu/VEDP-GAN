@@ -1,4 +1,4 @@
-"""Vanilla GAN 샘플링."""
+"""Vanilla GAN sampling."""
 
 import os
 

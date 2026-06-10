@@ -1,4 +1,4 @@
-"""ablation_study SDMetrics 평가."""
+"""SDMetrics evaluation for ablation_study."""
 
 import os
 
@@ -27,7 +27,7 @@ def _resolve_ks_complement_method(value=None):
     method = str(method).strip().lower()
     if method not in KS_COMPLEMENT_METHODS:
         valid = ", ".join(KS_COMPLEMENT_METHODS)
-        raise ValueError(f"ks_complement_method={method} 은(는) 지원하지 않는다. choices={valid}")
+        raise ValueError(f"ks_complement_method={method} is not supported. choices={valid}")
     return method
 
 
@@ -42,9 +42,9 @@ def _ks_complement(real_data, synthetic_data, method=None):
 
 
 def _resolve_metric_device(args):
-    ## SDMetrics는 Windows/WSL/Ubuntu 모두 CPU 경로로 고정한다.
-    ## KSC는 SciPy 기반 CPU 계산이고, TVC/coverage의 GPU 전환 오버헤드가
-    ## 현재 tabular selection 평가에서는 이득보다 클 수 있다.
+    ## SDMetrics is pinned to the CPU path on Windows, WSL, and Ubuntu.
+    ## KSC is a SciPy-based CPU calculation, and the GPU-transfer overhead for TVC/coverage
+    ## can outweigh the benefit in the current tabular selection evaluation.
     return torch.device("cpu")
 
 

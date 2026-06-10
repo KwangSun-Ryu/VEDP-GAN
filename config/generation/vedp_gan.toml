@@ -1,38 +1,38 @@
-## Stage 3 regularizer 제거 ablation용 residual VEDP-GAN 설정
-## - latent alignment와 mode seeking을 모두 끄므로 stage 3 objective는 stage 2와 동일함
+## Residual VEDP-GAN configuration for the stage 3 regularizer removal ablation
+## - Disables both latent alignment and mode seeking, so the stage 3 objective is identical to stage 2
 [runtime]
 batch_size = 256
 num_workers = 2
 bin_threshold = 0.5
-## synthetic CSV를 만들 때 target 분포를 어떻게 맞출지 결정
-## - "prior": 원본 데이터 전체 target 분포를 따라 생성
-## - "balanced": class 개수를 균등하게 맞춰 생성
-## - 학습 minibatch sampler와는 별개 옵션
+## Controls how the target distribution is matched when creating synthetic CSV files
+## - "prior": generate according to the full original target distribution
+## - "balanced": generate with equal class counts
+## - independent from the training minibatch sampler
 sampling_strategy = "prior"
 
 [evaluation]
-## KSComplement 내부 SciPy ks_2samp p-value 계산 방식
-## - "asymp": exact 계산 실패 warning 방지
-## - "auto"/"exact": SciPy 기본 자동/정확 계산
+## SciPy ks_2samp p-value calculation mode inside KSComplement
+## - "asymp": avoids warnings from failed exact calculations
+## - "auto"/"exact": SciPy default automatic/exact calculation
 ks_complement_method = "asymp"
 
 [train]
 epochs = 10000
 lr = 1e-3
-## VEDP-GAN (w/o L_align, w/o mode seeking)은 stage 3 추가 regularizer가 없으므로
-## total epochs와 무관하게 stage boundary를 고정함
+## VEDP-GAN (w/o L_align, w/o mode seeking) has no additional stage 3 regularizer, so
+## Keep stage boundaries fixed regardless of total epochs
 stage1_end_epoch = 150
 stage2_end_epoch = 500
 
-## checkpoint selection 설정
+## Checkpoint selection settings
 [checkpoint_selection]
 enable_best_on_test_selection = true
 selection_save_every = 5
 
 selection_candidate_start_epoch = 501
 ## - "stable_fidelity_score": `KSC_full`/`TVC_full` gate + weighted score + neighbor stable score
-## - "best_auc_test": AUC_test가 가장 높은 checkpoint 선택
-## - "gated_best_auc_test": `KSC_full`/`TVC_full` gate 통과 후보 중 AUC_test가 가장 높은 checkpoint 선택
+## - "best_auc_test": select the checkpoint with the highest AUC_test
+## - "gated_best_auc_test": select the candidate with the highest AUC_test among checkpoints passing the `KSC_full`/`TVC_full` gate
 checkpoint_selection_policy = "stable_fidelity_score"
 checkpoint_selection_use_fidelity_gate = true
 checkpoint_selection_ksc_gate_delta = 0.03
@@ -64,8 +64,8 @@ lr_scheduler_type = "cosine_fixed"
 lr_scheduler_t_max = 10000
 use_r1_penalty = true
 r1_weight = 10.0
-## 학습 minibatch에서 minority class starvation을 줄이기 위한 자동 quota sampler
-## natural이면 기존 shuffle을 유지하고, auto_minority_quota는 조건 충족 시 batch별 최소 minority 개수를 보장함
+## Automatic quota sampler to reduce minority-class starvation in training minibatches
+## natural keeps the existing shuffle, while auto_minority_quota enforces a minimum minority count per batch when conditions are met
 batch_sampling_strategy = "auto_minority_quota"
 minority_quota_trigger_ratio = 0.03
 minority_quota_trigger_expected = 8.0
@@ -77,13 +77,13 @@ grad_clip_norm = 1.0
 use_label_smoothing = true
 label_smoothing = 0.05
 use_wide_condition_embedding = true
-## Stage 3 mode seeking 제거
+## Remove stage 3 mode seeking
 use_mode_seeking_regularization = false
 mode_seeking_weight = 0.0
 mode_seeking_eps = 1e-6
 
-## Stage 3 latent distribution alignment 제거
-## - 이 설정에서는 stage 3에 추가되는 regularizer가 없으므로 stage 2와 stage 3의 objective가 동일함
+## Remove stage 3 latent distribution alignment
+## - No extra stage 3 regularizer is added here, so stage 2 and stage 3 share the same objective
 latent_align_weight = 0.0
 stage3_mode_seeking_scale = 0.0
 use_bounded_head = true

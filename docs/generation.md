@@ -1,8 +1,8 @@
 # Generation CLI
 
-`generation`은 지정한 생성 모델을 학습하고 합성 데이터를 생성합니다. 공개용 VEDP-GAN은 `--model-name VEDP-GAN`으로 실행합니다.
+`generation` trains the selected generative model and creates synthetic data. Run the public VEDP-GAN model with `--model-name VEDP-GAN`.
 
-## VEDP-GAN 학습 및 생성
+## Train And Generate With VEDP-GAN
 
 ```bash
 python main.py generation \
@@ -16,7 +16,7 @@ python main.py generation \
   --verbose-model
 ```
 
-## 여러 데이터셋 실행
+## Run Multiple Datasets
 
 ```bash
 python main.py generation \
@@ -29,7 +29,7 @@ python main.py generation \
   --eval-model-config-dir ./config/prediction
 ```
 
-## 다른 generator 포함 실행
+## Include Other Generators
 
 ```bash
 python main.py generation \

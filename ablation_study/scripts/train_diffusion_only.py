@@ -1,4 +1,4 @@
-"""Diffusion-only baseline 학습."""
+"""Diffusion-only baseline training."""
 
 import copy
 import os

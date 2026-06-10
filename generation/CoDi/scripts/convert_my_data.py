@@ -1,4 +1,4 @@
-# CoDi에 사용되는 데이터셋 구조로 변환
+# Convert to the dataset structure used by CoDi
 
 import argparse
 import os
@@ -26,17 +26,17 @@ def project_table(data, meta):
     return values
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='CoDi용 데이터 변환 스크립트')
+    parser = argparse.ArgumentParser(description='Data conversion script for CoDi')
     
     parser.add_argument('--data-dir', type=str, default='./data', 
-                        help='데이터셋이 저장되어 있는 경로')
+                        help='path where datasets are stored')
     parser.add_argument('--datasets', nargs="*", 
-                        help='변환할 데이터셋 이름 리스트')
+                        help='dataset names to convert')
     
     return parser.parse_args()
 
 def get_cols_info(json_path):
-    """ json 파일 경로를 넣어서 열 정보를 반환하는 함수 """
+    """Return column information from a JSON file path."""
     with open(json_path, 'r', encoding="utf-8") as file:
         cols_info = json.load(file)
     
@@ -52,18 +52,18 @@ def get_cols_info(json_path):
         
 def main():
     args = parse_args()
-    data_dir = os.path.join(args.data_dir, 'CoDi_data')  # 데이터셋을 저장할 경로
-    csv_dir = os.path.join(args.data_dir, 'original_data') # CSV 파일이 저장되어 있는 경로
-    cols_dir = os.path.join(args.data_dir, 'cols_info')    # 열 정보가 저장되어 있는 경로
+    data_dir = os.path.join(args.data_dir, 'CoDi_data')  # path where the converted dataset will be stored
+    csv_dir = os.path.join(args.data_dir, 'original_data') # path where CSV files are stored
+    cols_dir = os.path.join(args.data_dir, 'cols_info')    # path where column information is stored
     
-    # manifest 파일 불러오기
+    # Load the manifest file
     with open(os.path.join(args.data_dir, 'datasets_info.json'), 'r', encoding="utf-8") as file:
         meta_data = json.load(file)
 
     
-    #### 데이터셋 별로 진행 ####
+    #### Process each dataset ####
     for data_name in args.datasets:
-        # 데이터셋 저장 경로 재지정
+        # Reset dataset output path
         output_dir = os.path.join(data_dir, data_name)
         os.makedirs(output_dir, exist_ok=True)
         
@@ -79,13 +79,13 @@ def main():
             "categorical": {}
         }
         
-        # train / test data 분리
-        # train data는 target의 class에 따라 0, 1으로 분리
+        # Split train/test data
+        # Split train data into 0/1 by target class
         train_class_0 = df.loc[(df['split'] == 'train') & (df[target_col] == 0), :].drop(columns=['split'])
         train_class_1 = df.loc[(df['split'] == 'train') & (df[target_col] == 1), :].drop(columns=['split'])
         test = df.loc[df['split'] == 'test', :].drop(columns=['split'])
         
-        # data에 대한 meta 정보 작성
+        # Build metadata for the data
         meta = []
         for idx, info in enumerate(col_type):
             if info[1] == CONTINUOUS:
@@ -109,7 +109,7 @@ def main():
                     "i2s": mapper })
 
                 if info[0] == target_col:
-                    # target 컬럼은 항상 원본 레이블을 그대로 보존한다.
+                    # Always preserve the original labels in the target column.
                     mapping_entry = {str(value): str(value) for value in mapper}
                     mappings["target"]["mapping"] = mapping_entry
                 else:
@@ -124,11 +124,11 @@ def main():
 
         config = {
                 'columns':meta,
-                'columns_order': cols_order,   # 열 순서 기록해두고 복원 시 사용
-                'original_data_size': len(df), # sampling 시에 original 크기만큼 생성
+                'columns_order': cols_order,   # record column order for restoration
+                'original_data_size': len(df), # generate the original data size during sampling
                 'problem_type':'binary_classification' }
         
-        # 메타데이터, 데이터 저장
+        # Save metadata and data
         with open(os.path.join(output_dir, f'{data_name}.json'), 'w') as file:
             json.dump(config, file, sort_keys=True, indent=4, separators=(',', ': '))
             
