@@ -1,0 +1,97 @@
+{
+    "tables": {
+        "table": {
+            "columns": {
+                "ECMO_flag": {
+                    "sdtype": "categorical"
+                },
+                "Hemodialysis_flag": {
+                    "sdtype": "categorical"
+                },
+                "CRRT_flag": {
+                    "sdtype": "categorical"
+                },
+                "Temperature": {
+                    "sdtype": "numerical"
+                },
+                "Heart_rate": {
+                    "sdtype": "numerical"
+                },
+                "Systolic_blood_pressure": {
+                    "sdtype": "numerical"
+                },
+                "Diastolic_blood_pressure": {
+                    "sdtype": "numerical"
+                },
+                "Norepinephrine_rate": {
+                    "sdtype": "numerical"
+                },
+                "Respiratory_rate": {
+                    "sdtype": "numerical"
+                },
+                "Oxygen_saturation": {
+                    "sdtype": "numerical"
+                },
+                "GCS_eye_opening": {
+                    "sdtype": "numerical"
+                },
+                "GCS_motor_response": {
+                    "sdtype": "numerical"
+                },
+                "GCS_verbal_response": {
+                    "sdtype": "numerical"
+                },
+                "RASS_score": {
+                    "sdtype": "numerical"
+                },
+                "PEEP": {
+                    "sdtype": "numerical"
+                },
+                "FiO2": {
+                    "sdtype": "numerical"
+                },
+                "Plateau_Pressure": {
+                    "sdtype": "numerical"
+                },
+                "Lung_Compliance": {
+                    "sdtype": "numerical"
+                },
+                "Minute_ventilation": {
+                    "sdtype": "numerical"
+                },
+                "WBC_count": {
+                    "sdtype": "numerical"
+                },
+                "Lymphocytes": {
+                    "sdtype": "numerical"
+                },
+                "Neutrophils": {
+                    "sdtype": "numerical"
+                },
+                "Hemoglobin": {
+                    "sdtype": "numerical"
+                },
+                "Platelets": {
+                    "sdtype": "numerical"
+                },
+                "Bicarbonate": {
+                    "sdtype": "numerical"
+                },
+                "Creatinine": {
+                    "sdtype": "numerical"
+                },
+                "Albumin": {
+                    "sdtype": "numerical"
+                },
+                "Bilirubin": {
+                    "sdtype": "numerical"
+                },
+                "Labels": {
+                    "sdtype": "categorical"
+                }
+            }
+        }
+    },
+    "relationships": [],
+    "METADATA_SPEC_VERSION": "V1"
+}

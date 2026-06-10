@@ -1,0 +1,160 @@
+{
+  "tables": {
+    "table": {
+      "columns": {
+        "death_inhosp": {
+          "sdtype": "categorical"
+        },
+        "age": {
+          "sdtype": "numerical"
+        },
+        "sex": {
+          "sdtype": "categorical"
+        },
+        "height": {
+          "sdtype": "numerical"
+        },
+        "weight": {
+          "sdtype": "numerical"
+        },
+        "bmi": {
+          "sdtype": "numerical"
+        },
+        "asa": {
+          "sdtype": "numerical"
+        },
+        "emop": {
+          "sdtype": "categorical"
+        },
+        "department": {
+          "sdtype": "categorical"
+        },
+        "optype": {
+          "sdtype": "categorical"
+        },
+        "approach": {
+          "sdtype": "categorical"
+        },
+        "position": {
+          "sdtype": "categorical"
+        },
+        "ane_type": {
+          "sdtype": "categorical"
+        },
+        "preop_htn": {
+          "sdtype": "categorical"
+        },
+        "preop_dm": {
+          "sdtype": "categorical"
+        },
+        "preop_hb": {
+          "sdtype": "numerical"
+        },
+        "preop_plt": {
+          "sdtype": "numerical"
+        },
+        "preop_pt": {
+          "sdtype": "numerical"
+        },
+        "preop_aptt": {
+          "sdtype": "numerical"
+        },
+        "preop_na": {
+          "sdtype": "numerical"
+        },
+        "preop_k": {
+          "sdtype": "numerical"
+        },
+        "preop_gluc": {
+          "sdtype": "numerical"
+        },
+        "preop_alb": {
+          "sdtype": "numerical"
+        },
+        "preop_ast": {
+          "sdtype": "numerical"
+        },
+        "preop_alt": {
+          "sdtype": "numerical"
+        },
+        "preop_bun": {
+          "sdtype": "numerical"
+        },
+        "preop_cr": {
+          "sdtype": "numerical"
+        },
+        "cormack": {
+          "sdtype": "numerical"
+        },
+        "airway": {
+          "sdtype": "categorical"
+        },
+        "tubesize": {
+          "sdtype": "numerical"
+        },
+        "iv1": {
+          "sdtype": "categorical"
+        },
+        "intraop_crystalloid": {
+          "sdtype": "numerical"
+        },
+        "intraop_rocu": {
+          "sdtype": "numerical"
+        },
+        "intraop_eph": {
+          "sdtype": "numerical"
+        },
+        "intraop_epi_used": {
+          "sdtype": "categorical"
+        },
+        "intraop_epi_amount": {
+          "sdtype": "numerical"
+        },
+        "intraop_ffp_used": {
+          "sdtype": "categorical"
+        },
+        "intraop_ffp_amount": {
+          "sdtype": "numerical"
+        },
+        "intraop_rbc_used": {
+          "sdtype": "categorical"
+        },
+        "intraop_rbc_amount": {
+          "sdtype": "numerical"
+        },
+        "intraop_colloid_used": {
+          "sdtype": "categorical"
+        },
+        "intraop_colloid_amount": {
+          "sdtype": "numerical"
+        },
+        "intraop_phe_used": {
+          "sdtype": "categorical"
+        },
+        "intraop_phe_amount": {
+          "sdtype": "numerical"
+        },
+        "intraop_ca_used": {
+          "sdtype": "categorical"
+        },
+        "intraop_ca_amount": {
+          "sdtype": "numerical"
+        },
+        "intraop_ftn_used": {
+          "sdtype": "categorical"
+        },
+        "intraop_ftn_amount": {
+          "sdtype": "numerical"
+        },
+        "intraop_ppf_used": {
+          "sdtype": "categorical"
+        },
+        "intraop_ppf_amount": {
+          "sdtype": "numerical"
+        }
+      }
+    }
+  },
+  "relationships": [],
+  "METADATA_SPEC_VERSION": "V1"
+}

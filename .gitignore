@@ -8,7 +8,6 @@ __pycache__/
 env/
 venv/
 
-data/
 output/
 result/
 sample/

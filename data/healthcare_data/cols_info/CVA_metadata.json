@@ -1,0 +1,43 @@
+{
+    "tables": {
+        "table": {
+            "columns": {
+                "gender": {
+                    "sdtype": "categorical"
+                },
+                "age": {
+                    "sdtype": "numerical"
+                },
+                "hypertension": {
+                    "sdtype": "categorical"
+                },
+                "heart_disease": {
+                    "sdtype": "categorical"
+                },
+                "ever_married": {
+                    "sdtype": "categorical"
+                },
+                "work_type": {
+                    "sdtype": "categorical"
+                },
+                "Residence_type": {
+                    "sdtype": "categorical"
+                },
+                "avg_glucose_level": {
+                    "sdtype": "numerical"
+                },
+                "bmi": {
+                    "sdtype": "numerical"
+                },
+                "smoking_status": {
+                    "sdtype": "categorical"
+                },
+                "stroke": {
+                    "sdtype": "categorical"
+                }
+            }
+        }
+    },
+    "relationships": [],
+    "METADATA_SPEC_VERSION": "V1"
+}

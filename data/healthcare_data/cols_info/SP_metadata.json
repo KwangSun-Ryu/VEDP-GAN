@@ -1,0 +1,127 @@
+{
+    "tables": {
+        "table": {
+            "columns": {
+                "age": {
+                    "sdtype": "numerical"
+                },
+                "sex": {
+                    "sdtype": "categorical"
+                },
+                "dzgroup": {
+                    "sdtype": "categorical"
+                },
+                "dzclass": {
+                    "sdtype": "categorical"
+                },
+                "num.co": {
+                    "sdtype": "categorical"
+                },
+                "edu": {
+                    "sdtype": "numerical"
+                },
+                "income": {
+                    "sdtype": "categorical"
+                },
+                "scoma": {
+                    "sdtype": "numerical"
+                },
+                "charges": {
+                    "sdtype": "numerical"
+                },
+                "totcst": {
+                    "sdtype": "numerical"
+                },
+                "totmcst": {
+                    "sdtype": "numerical"
+                },
+                "avtisst": {
+                    "sdtype": "numerical"
+                },
+                "race": {
+                    "sdtype": "categorical"
+                },
+                "sps": {
+                    "sdtype": "numerical"
+                },
+                "aps": {
+                    "sdtype": "numerical"
+                },
+                "surv2m": {
+                    "sdtype": "numerical"
+                },
+                "surv6m": {
+                    "sdtype": "numerical"
+                },
+                "hday": {
+                    "sdtype": "numerical"
+                },
+                "diabetes": {
+                    "sdtype": "categorical"
+                },
+                "dementia": {
+                    "sdtype": "categorical"
+                },
+                "ca": {
+                    "sdtype": "categorical"
+                },
+                "prg2m": {
+                    "sdtype": "numerical"
+                },
+                "prg6m": {
+                    "sdtype": "numerical"
+                },
+                "dnr": {
+                    "sdtype": "categorical"
+                },
+                "dnrday": {
+                    "sdtype": "numerical"
+                },
+                "meanbp": {
+                    "sdtype": "numerical"
+                },
+                "wblc": {
+                    "sdtype": "numerical"
+                },
+                "hrt": {
+                    "sdtype": "numerical"
+                },
+                "resp": {
+                    "sdtype": "numerical"
+                },
+                "temp": {
+                    "sdtype": "numerical"
+                },
+                "pafi": {
+                    "sdtype": "numerical"
+                },
+                "alb": {
+                    "sdtype": "numerical"
+                },
+                "bili": {
+                    "sdtype": "numerical"
+                },
+                "crea": {
+                    "sdtype": "numerical"
+                },
+                "sod": {
+                    "sdtype": "numerical"
+                },
+                "ph": {
+                    "sdtype": "numerical"
+                },
+                "adls": {
+                    "sdtype": "numerical"
+                },
+                "adlsc": {
+                    "sdtype": "numerical"
+                },
+                "hospdead": {
+                    "sdtype": "categorical"
+                }
+            }
+        }
+    },
+    "relationships": [],
+    "METADATA_SPEC_VERSION": "V1"
+}
